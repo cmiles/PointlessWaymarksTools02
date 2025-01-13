@@ -4,7 +4,7 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using IDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
-namespace PointlessWaymarks.CmsWpfControls.Utility;
+namespace PointlessWaymarks.WpfCommon.Utility;
 
 /// <summary>
 ///     https://stackoverflow.com/questions/24985239/dropped-zip-file-causes-e-data-getdatafilecontents-to-throw-an-exception
