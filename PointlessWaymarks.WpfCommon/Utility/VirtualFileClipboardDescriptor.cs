@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 
-namespace PointlessWaymarks.CmsWpfControls.Utility;
+namespace PointlessWaymarks.WpfCommon.Utility;
 
 //TODO: Refactor to WPF Common
 
