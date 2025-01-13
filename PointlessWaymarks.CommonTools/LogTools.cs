@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -77,8 +77,6 @@ public static class LogTools
 
         try
         {
-            Log.Information(
-                $"Git Commit {ThisAssembly.Git.Commit} - Commit Date {ThisAssembly.Git.CommitDate} - Is Dirty {ThisAssembly.Git.IsDirty}");
             Log.Information($"Build Date {ProgramInfoTools.GetEntryAssemblyBuildDate()}");
         }
         catch (Exception e)
@@ -94,8 +92,6 @@ public static class LogTools
 
         try
         {
-            Log.Information(
-                $"Git Commit {ThisAssembly.Git.Commit} - Commit Date {ThisAssembly.Git.CommitDate} - Is Dirty {ThisAssembly.Git.IsDirty}");
             Log.Information($"{ProgramInfoTools.GetEntryAssemblyBuildDate()}");
         }
         catch (Exception e)

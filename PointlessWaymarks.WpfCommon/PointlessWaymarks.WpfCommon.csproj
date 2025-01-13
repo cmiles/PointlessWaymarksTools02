@@ -48,10 +48,6 @@
 
     <ItemGroup>
         <PackageReference Include="FilterDataGrid" Version="1.2.8" />
-        <PackageReference Include="GitInfo" Version="3.5.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
         <PackageReference Include="HtmlTableHelper" Version="1.2.4" />
         <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
