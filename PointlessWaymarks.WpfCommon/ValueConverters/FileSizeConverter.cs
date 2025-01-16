@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows.Data;
 using PointlessWaymarks.CommonTools;
 
@@ -21,16 +21,6 @@ public sealed class FileSizeConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        switch (value)
-        {
-            case null:
-                return null;
-            case double doubleElevation:
-                return doubleElevation.FeetToMeters();
-        }
-
-        if (double.TryParse(value.ToString(), out var stringParsedElevation))
-            return stringParsedElevation.FeetToMeters();
-        return null;
+        throw new NotImplementedException();
     }
 }
