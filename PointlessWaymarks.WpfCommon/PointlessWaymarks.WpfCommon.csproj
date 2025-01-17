@@ -47,7 +47,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FilterDataGrid" Version="1.2.8" />
+        <PackageReference Include="FilterDataGrid" Version="1.2.9" />
         <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
         <PackageReference Include="HtmlTableHelper" Version="1.2.4" />
         <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
@@ -65,7 +65,7 @@
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
         <PackageReference Include="SharpVectors.Wpf" Version="1.8.4.2" />
         <PackageReference Include="SkiaSharp" Version="3.116.1" />
-        <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+        <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
         <PackageReference Include="TypeSupport" Version="1.2.0" />
         <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
     </ItemGroup>
