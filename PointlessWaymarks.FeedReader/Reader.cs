@@ -67,21 +67,6 @@ public static class Reader
     ///     Opens a webpage and reads all feed urls from it (link rel="alternate" type="application/...")
     /// </summary>
     /// <param name="url">the url of the page</param>
-    /// <returns>a list of links including the type and title, an empty list if no links are found</returns>
-    /// <example>
-    ///     FeedReader.GetFeedUrlsFromUrl("codehollow.com"); // returns a list of all available feeds at
-    ///     https://codehollow.com
-    /// </example>
-    [Obsolete("Use GetFeedUrlsFromUrlAsync method")]
-    public static IEnumerable<HtmlFeedLink> GetFeedUrlsFromUrl(string url)
-    {
-        return GetFeedUrlsFromUrlAsync(url).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
-    ///     Opens a webpage and reads all feed urls from it (link rel="alternate" type="application/...")
-    /// </summary>
-    /// <param name="url">the url of the page</param>
     /// <param name="cancellationToken">token to cancel operation</param>
     /// ///
     /// <param name="autoRedirect">auto redirect if page is moved permanently</param>
@@ -119,17 +104,6 @@ public static class Reader
     ///     Opens a webpage and reads all feed urls from it (link rel="alternate" type="application/...")
     /// </summary>
     /// <param name="url">the url of the page</param>
-    /// <returns>a list of links, an empty list if no links are found</returns>
-    [Obsolete("Use the ParseFeedUrlsAsStringAsync method")]
-    public static string?[] ParseFeedUrlsAsString(string url)
-    {
-        return ParseFeedUrlsAsStringAsync(url).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
-    ///     Opens a webpage and reads all feed urls from it (link rel="alternate" type="application/...")
-    /// </summary>
-    /// <param name="url">the url of the page</param>
     /// <param name="cancellationToken">token to cancel operation</param>
     /// <returns>a list of links, an empty list if no links are found</returns>
     public static async Task<string?[]> ParseFeedUrlsAsStringAsync(string url, CancellationToken cancellationToken)
@@ -157,18 +131,6 @@ public static class Reader
     {
         // left the method here for downward compatibility
         return Helpers.ParseFeedUrlsFromHtml(htmlContent);
-    }
-
-    /// <summary>
-    ///     reads a feed from an url. the url must be a feed. Use ParseFeedUrlsFromHtml to
-    ///     parse the feeds from an url which is not a feed.
-    /// </summary>
-    /// <param name="url">the url to a feed</param>
-    /// <returns>parsed feed</returns>
-    [Obsolete("Use ReadAsync method")]
-    public static Feed Read(string url)
-    {
-        return ReadAsync(url).GetAwaiter().GetResult();
     }
 
     /// <summary>

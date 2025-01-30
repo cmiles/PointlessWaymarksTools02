@@ -35,17 +35,6 @@ public static class Helpers
     /// Download the content from an url
     /// </summary>
     /// <param name="url">correct url</param>
-    /// <returns>Content as string</returns>
-    [Obsolete("Use the DownloadAsync method")]
-    public static string Download(string url)
-    {
-        return DownloadAsync(url).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
-    /// Download the content from an url
-    /// </summary>
-    /// <param name="url">correct url</param>
     /// <param name="cancellationToken">token to cancel operation</param>
     /// <param name="autoRedirect">autoredirect if page is moved permanently</param>
     /// <param name="userAgent">override built-in user-agent header</param>
