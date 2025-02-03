@@ -4,7 +4,8 @@ namespace PointlessWaymarks.FeedReader;
 
 /// <summary>
 ///     The static FeedReader class which allows to read feeds from a given url. Use it to
-///     parse a feed from an url <see cref="Read(string)" />, a file <see cref="ReadFromFile(string)" /> or
+///     parse a feed from an url <see cref="ReadAsync(string,CancellationToken,bool,string?,string?,string?)" />, a file
+///     <see cref="ReadFromFile(string)" /> or
 ///     <see cref="ReadFromFileAsync(string)" />, a byte array <see cref="ReadFromByteArray(byte[])" />
 ///     or a string <see cref="ReadFromString(string)" />. If the feed url is not known,
 ///     <see cref="ParseFeedUrlsFromHtml(string)" />

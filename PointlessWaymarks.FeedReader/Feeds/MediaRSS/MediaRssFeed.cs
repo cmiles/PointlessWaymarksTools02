@@ -109,7 +109,6 @@ public class MediaRssFeed : BaseFeed
     /// default constructor (for serialization)
     /// </summary>
     public MediaRssFeed()
-        : base()
     {
     }
 

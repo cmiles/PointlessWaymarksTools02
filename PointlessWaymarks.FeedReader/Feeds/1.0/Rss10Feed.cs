@@ -43,7 +43,6 @@ public class Rss10Feed : BaseFeed
     /// default constructor (for serialization)
     /// </summary>
     public Rss10Feed()
-        : base()
     {
     }
 

@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <Platforms>x64</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>13.0</LangVersion>

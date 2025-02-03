@@ -68,7 +68,6 @@ public class Rss20FeedItem : BaseFeedItem
     /// default constructor (for serialization)
     /// </summary>
     public Rss20FeedItem()
-        : base()
     {
     }
 

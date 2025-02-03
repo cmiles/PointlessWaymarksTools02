@@ -109,7 +109,6 @@ public class Rss20Feed : BaseFeed
     /// default constructor (for serialization)
     /// </summary>
     public Rss20Feed()
-        : base()
     {
     }
 

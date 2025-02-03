@@ -30,7 +30,7 @@ public class HtmlFeedLink
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HtmlFeedLink"/> class.
-    /// Creates an html feed link item
+    /// Creates a html feed link item
     /// </summary>
     /// <param name="title">title fo the feed</param>
     /// <param name="url">url of the feed</param>

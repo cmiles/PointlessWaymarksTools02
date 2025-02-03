@@ -73,7 +73,6 @@ public class AtomFeed : BaseFeed
     /// default constructor (for serialization)
     /// </summary>
     public AtomFeed()
-        : base()
     {
     }
 
