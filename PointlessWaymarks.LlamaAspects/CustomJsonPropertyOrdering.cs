@@ -12,7 +12,7 @@ public class JsonAlphabeticalPropertyOrdering : TypeAspect
 
     {
         var attribute = AttributeConstruction.Create(
-            typeof(JsonPropertyOrderAttribute),new object[] { 0 });
+            typeof(JsonPropertyOrderAttribute), [0]);
 
         var currentOrder = 0;
 
@@ -37,7 +37,7 @@ public class JsonAlphabeticalPropertyOrdering : TypeAspect
         foreach (var loopProperty in unassignedProperties)
         {
             builder.Advice.IntroduceAttribute(loopProperty, AttributeConstruction.Create(
-                typeof(JsonPropertyOrderAttribute), new object[] { ++currentOrder }));
+                typeof(JsonPropertyOrderAttribute), [++currentOrder]));
         }
     }
 }

@@ -1,5 +1,7 @@
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.Input;
+using Metalama.Framework.Advising;
 using Metalama.Framework.Aspects;
 using Metalama.Framework.Code;
 
@@ -13,7 +15,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
                      (p.Attributes.Any(typeof(BlockingCommandAttribute)) ||
                       p.Attributes.Any(typeof(NonBlockingCommandAttribute))) && p.Parameters.Count == 0))
             builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
-                TypeFactory.GetType(typeof(RelayCommand)).ToNullableType(), IntroductionScope.Default,
+                TypeFactory.GetType(typeof(RelayCommand)).ToNullable(), IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder => propertyBuilder.Accessibility = Accessibility.Public);
 
@@ -26,7 +28,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
 
             builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
                 ((INamedType)TypeFactory.GetType(typeof(RelayCommand<>))).WithTypeArguments(firstParameterType)
-                .ToNullableType(),
+                .ToNullable(),
                 IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder =>
@@ -44,7 +46,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
 
             builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
                 ((INamedType)TypeFactory.GetType(typeof(RelayCommand<>))).WithTypeArguments(firstParameterType)
-                .ToNullableType(),
+                .ToNullable(),
                 IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder =>
@@ -59,11 +61,30 @@ public class GenerateStatusCommandsAttribute : TypeAspect
                       p.Attributes.Any(typeof(NonBlockingCommandAttribute))) && p.Parameters.Count == 1 &&
                      p.Parameters[0].Type.ToType() == typeof(CancellationToken)))
             builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
-                TypeFactory.GetType(typeof(RelayCommand)).ToNullableType(), IntroductionScope.Default,
+                TypeFactory.GetType(typeof(RelayCommand)).ToNullable(), IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder => propertyBuilder.Accessibility = Accessibility.Public);
 
         builder.Advice.IntroduceMethod(builder.Target, "BuildCommands");
+
+        //if (builder.Target.Constructors.Count < 1)
+        //{
+        //    builder.IntroduceConstructor(
+        //        nameof(builder.Target),
+        //        buildConstructor: c => { });
+        //}
+
+        //foreach (var constructor in builder.Target.Constructors)
+        //{
+        //    builder.With(constructor).Override(nameof(this.OverrideConstructorTemplate));
+        //}
+    }
+
+    [Template]
+    private void OverrideConstructorTemplate()
+    {
+        meta.Proceed();
+        meta.InsertStatement("BuildCommands();");
     }
 
     [Template]
