@@ -78,7 +78,6 @@ public class MediaRssFeedItem : BaseFeedItem
     /// default constructor (for serialization)
     /// </summary>
     public MediaRssFeedItem()
-        : base()
     {
     }
 

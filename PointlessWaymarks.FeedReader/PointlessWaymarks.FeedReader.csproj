@@ -1,18 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <Platforms>x64</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>13.0</LangVersion>
     <Title>CodeHollow.FeedReader</Title>
-    <Authors>Armin Reiter</Authors>
-    <Company>Reiter ITS</Company>
+    <Authors>Armin Reiter, Charles Miles</Authors>
+    <Company>Reiter ITS, Pointless Waymarks Software</Company>
     <Product>CodeHollow.FeedReader</Product>
-    <Description>RSS and ATOM feed reader/parser. FeedReader is a .net standard 1.3 library used for reading and parsing RSS and ATOM feeds. Supports RSS 0.91, 0.92, 1.0, 2.0 and ATOM. Library tested with multiple languages and feeds.</Description>
-    <Copyright>Copyright 2023</Copyright>
-    <PackageProjectUrl>https://github.com/arminreiter/FeedReader/</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/arminreiter/FeedReader/</RepositoryUrl>
+    <Description>RSS and ATOM feed reader/parser. FeedReader is a .net library used for reading and parsing RSS and ATOM feeds. Supports RSS 0.91, 0.92, 1.0, 2.0 and ATOM. Library tested with multiple languages and feeds.</Description>
+    <Copyright>Copyright 2025</Copyright>
+    <PackageProjectUrl>https://chiselapp.com/user/cmiles/repository/pointless-waymarks-tools/</PackageProjectUrl>
+    <RepositoryUrl>https://chiselapp.com/user/cmiles/repository/pointless-waymarks-tools/</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <None Update="FeedReader-LICENSE">

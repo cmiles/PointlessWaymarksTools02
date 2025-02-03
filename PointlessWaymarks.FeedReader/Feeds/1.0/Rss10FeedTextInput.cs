@@ -4,7 +4,7 @@ using PointlessWaymarks.FeedReader.Feeds.Base;
 namespace PointlessWaymarks.FeedReader.Feeds._1._0;
 
 /// <summary>
-/// Rss 1.0 Feed textinput according to specification: http://web.resource.org/rss/1.0/spec
+/// Rss 1.0 Feed text input according to specification: http://web.resource.org/rss/1.0/spec
 /// </summary>
 public class Rss10FeedTextInput : FeedTextInput
 {
@@ -18,7 +18,6 @@ public class Rss10FeedTextInput : FeedTextInput
     /// default constructor (for serialization)
     /// </summary>
     public Rss10FeedTextInput()
-        : base()
     {
     }
 

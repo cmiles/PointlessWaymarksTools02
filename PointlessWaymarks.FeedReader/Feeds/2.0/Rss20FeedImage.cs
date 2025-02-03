@@ -13,7 +13,6 @@ public class Rss20FeedImage : Rss091FeedImage
     /// default constructor (for serialization)
     /// </summary>
     public Rss20FeedImage()
-        : base()
     {
     }
 

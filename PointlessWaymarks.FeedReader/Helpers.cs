@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using AngleSharp;
@@ -8,23 +9,23 @@ using PointlessWaymarks.FeedReader.Feeds.MediaRSS;
 namespace PointlessWaymarks.FeedReader;
 
 /// <summary>
-/// static class with helper functions
+///     static class with helper functions
 /// </summary>
 public static class Helpers
 {
-    private const string ACCEPT_HEADER_NAME = "Accept";
+    private const string accept_header_name = "Accept";
 
-    private const string ACCEPT_HEADER_VALUE =
+    private const string accept_header_value =
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
 
-    private const string USER_AGENT_NAME = "User-Agent";
+    private const string user_agent_name = "User-Agent";
 
-    private const string USER_AGENT_VALUE =
+    private const string user_agent_value =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15 Edg/119.0.0.0";
 
     // The HttpClient instance must be a static field
     // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
-    private static readonly HttpClient _httpClient = new(
+    private static readonly HttpClient HttpClient = new(
         new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
@@ -32,17 +33,17 @@ public static class Helpers
     );
 
     /// <summary>
-    /// Download the content from an url
+    ///     Download the content from an url
     /// </summary>
     /// <param name="url">correct url</param>
     /// <param name="cancellationToken">token to cancel operation</param>
-    /// <param name="autoRedirect">autoredirect if page is moved permanently</param>
+    /// <param name="autoRedirect">auto-redirect if page is moved permanently</param>
     /// <param name="userAgent">override built-in user-agent header</param>
     /// <param name="basicAuthUsername"></param>
     /// <param name="basicAuthPassword"></param>
     /// <returns>Content as byte array</returns>
     public static async Task<byte[]> DownloadBytesAsync(string url, CancellationToken cancellationToken,
-        bool autoRedirect = true, string? userAgent = USER_AGENT_VALUE, string? basicAuthUsername = null,
+        bool autoRedirect = true, string? userAgent = user_agent_value, string? basicAuthUsername = null,
         string? basicAuthPassword = null)
     {
         //TODO: Pass better Errors from this method
@@ -50,48 +51,48 @@ public static class Helpers
         HttpResponseMessage response;
         using (var request = new HttpRequestMessage(HttpMethod.Get, url))
         {
-            request.Headers.TryAddWithoutValidation(ACCEPT_HEADER_NAME, ACCEPT_HEADER_VALUE);
-            request.Headers.TryAddWithoutValidation(USER_AGENT_NAME, userAgent);
+            request.Headers.TryAddWithoutValidation(accept_header_name, accept_header_value);
+            request.Headers.TryAddWithoutValidation(user_agent_name, userAgent);
             if (basicAuthUsername is not null && basicAuthPassword is not null)
             {
                 var authString =
                     Convert.ToBase64String(Encoding.UTF8.GetBytes($"{basicAuthUsername}:{basicAuthPassword}"));
                 request.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+                    new AuthenticationHeaderValue("Basic", authString);
             }
 
-            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+            response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .ConfigureAwait(false);
         }
 
         if (!response.IsSuccessStatusCode)
         {
             var statusCode = (int)response.StatusCode;
-            // redirect if statuscode = 301 - Moved Permanently, 302 - Moved temporarily 308 - Permanent redirect
+            // redirect if status code = 301 - Moved Permanently, 302 - Moved temporarily 308 - Permanent redirect
             if (autoRedirect && statusCode is 301 or 302 or 308)
             {
-                url = response.Headers?.Location?.AbsoluteUri ?? url;
+                url = response.Headers.Location?.AbsoluteUri ?? url;
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                request.Headers.TryAddWithoutValidation(ACCEPT_HEADER_NAME, ACCEPT_HEADER_VALUE);
-                request.Headers.TryAddWithoutValidation(USER_AGENT_NAME, userAgent);
+                request.Headers.TryAddWithoutValidation(accept_header_name, accept_header_value);
+                request.Headers.TryAddWithoutValidation(user_agent_name, userAgent);
 
                 if (basicAuthUsername is not null && basicAuthPassword is not null)
                 {
                     var authString =
                         Convert.ToBase64String(Encoding.UTF8.GetBytes($"{basicAuthUsername}:{basicAuthPassword}"));
                     request.Headers.Authorization =
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
+                        new AuthenticationHeaderValue("Basic", authString);
                 }
 
-                response = await _httpClient
+                response = await HttpClient
                     .SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                     .ConfigureAwait(false);
             }
             else
             {
                 //TODO: Better Fallback Code - all the way to Playwright?
-                //If there is a failure and it is not a redirect try using AngleSharp
+                //If there is a failure, and it is not a redirect try using AngleSharp
 
                 if (basicAuthUsername is not null && basicAuthPassword is not null)
                 {
@@ -102,26 +103,26 @@ public static class Helpers
 
                     var basicAuthConfig = Configuration.Default.WithRequesters(basicAuthHandler).WithJs();
                     var basicAuthContext = BrowsingContext.New(basicAuthConfig);
-                    var basicAuthDocument = await basicAuthContext.OpenAsync(url);
+                    var basicAuthDocument = await basicAuthContext.OpenAsync(url, cancellationToken);
                     return Encoding.Unicode.GetBytes(basicAuthDocument.Source.Text);
                 }
 
                 var config = Configuration.Default.WithDefaultLoader().WithJs();
                 var context = BrowsingContext.New(config);
-                var document = await context.OpenAsync(url);
+                var document = await context.OpenAsync(url, cancellationToken);
                 return Encoding.Unicode.GetBytes(document.Source.Text);
             }
         }
 
-        var content = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         return content;
     }
 
     /// <summary>
-    /// Download the content from an url
+    ///     Download the content from an url
     /// </summary>
     /// <param name="url">correct url</param>
-    /// <param name="autoRedirect">autoredirect if page is moved permanently</param>
+    /// <param name="autoRedirect">auto-redirect if page is moved permanently</param>
     /// <returns>Content as byte array</returns>
     public static Task<byte[]> DownloadBytesAsync(string url, bool autoRedirect = true)
     {
@@ -129,13 +130,13 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Download the content from an url and returns it as utf8 encoded string.
-    /// Preferred way is to use <see cref="DownloadBytesAsync(string, bool)"/> because it works
-    /// better with encoding.
+    ///     Download the content from an url and returns it as utf8 encoded string.
+    ///     Preferred way is to use <see cref="DownloadBytesAsync(string, bool)" /> because it works
+    ///     better with encoding.
     /// </summary>
     /// <param name="url">correct url</param>
     /// <param name="cancellationToken">token to cancel operation</param>
-    /// <param name="autoRedirect">autoredirect if page is moved permanently</param>
+    /// <param name="autoRedirect">auto-redirect if page is moved permanently</param>
     /// <returns>Content as string</returns>
     public static async Task<string> DownloadAsync(string url, CancellationToken cancellationToken,
         bool autoRedirect = true)
@@ -145,12 +146,12 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Download the content from an url and returns it as utf8 encoded string.
-    /// Preferred way is to use <see cref="DownloadBytesAsync(string, bool)"/> because it works
-    /// better with encoding.
+    ///     Download the content from an url and returns it as utf8 encoded string.
+    ///     Preferred way is to use <see cref="DownloadBytesAsync(string, bool)" /> because it works
+    ///     better with encoding.
     /// </summary>
     /// <param name="url">correct url</param>
-    /// <param name="autoRedirect">autoredirect if page is moved permanently</param>
+    /// <param name="autoRedirect">auto-redirect if page is moved permanently</param>
     /// <returns>Content as string</returns>
     public static Task<string> DownloadAsync(string url, bool autoRedirect = true)
     {
@@ -158,7 +159,7 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Tries to parse the string as datetime and returns null if it fails
+    ///     Tries to parse the string as datetime and returns null if it fails
     /// </summary>
     /// <param name="datetime">datetime as string</param>
     /// <param name="cultureInfo">The cultureInfo for parsing</param>
@@ -178,24 +179,25 @@ public static class Helpers
             if (datetime.Contains(","))
             {
                 var pos = datetime.IndexOf(',') + 1;
-                var newdtstring = datetime[pos..].Trim();
+                var newDateTimeString = datetime[pos..].Trim();
 
-                parseSuccess = DateTimeOffset.TryParse(newdtstring, dateTimeFormat, DateTimeStyles.None, out dt);
+                parseSuccess = DateTimeOffset.TryParse(newDateTimeString, dateTimeFormat, DateTimeStyles.None, out dt);
             }
 
             if (!parseSuccess)
             {
-                var newdtstring = datetime[..datetime.LastIndexOf(" ")].Trim();
+                var newDateTimeString = datetime[..datetime.LastIndexOf(" ", StringComparison.Ordinal)].Trim();
 
-                parseSuccess = DateTimeOffset.TryParse(newdtstring, dateTimeFormat, DateTimeStyles.AssumeUniversal,
+                parseSuccess = DateTimeOffset.TryParse(newDateTimeString, dateTimeFormat,
+                    DateTimeStyles.AssumeUniversal,
                     out dt);
             }
 
             if (!parseSuccess)
             {
-                var newdtstring = datetime[..datetime.LastIndexOf(" ")].Trim();
+                var newDateTimeString = datetime[..datetime.LastIndexOf(" ", StringComparison.Ordinal)].Trim();
 
-                parseSuccess = DateTimeOffset.TryParse(newdtstring, dateTimeFormat, DateTimeStyles.None,
+                parseSuccess = DateTimeOffset.TryParse(newDateTimeString, dateTimeFormat, DateTimeStyles.None,
                     out dt);
             }
         }
@@ -207,7 +209,7 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Tries to parse the string as int and returns null if it fails
+    ///     Tries to parse the string as int and returns null if it fails
     /// </summary>
     /// <param name="input">int as string</param>
     /// <returns>integer or null</returns>
@@ -219,16 +221,15 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Tries to parse a string and returns the media type
+    ///     Tries to parse a string and returns the media type
     /// </summary>
     /// <param name="medium">media type as string</param>
-    /// <returns><see cref="Medium"/></returns>
+    /// <returns>
+    ///     <see cref="Medium" />
+    /// </returns>
     public static Medium TryParseMedium(string? medium)
     {
-        if (string.IsNullOrEmpty(medium))
-        {
-            return Medium.Unknown;
-        }
+        if (string.IsNullOrEmpty(medium)) return Medium.Unknown;
 
         return medium.ToLower() switch
         {
@@ -242,7 +243,7 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Tries to parse the string as int and returns null if it fails
+    ///     Tries to parse the string as int and returns null if it fails
     /// </summary>
     /// <param name="input">int as string</param>
     /// <returns>integer or null</returns>
@@ -253,24 +254,22 @@ public static class Helpers
             input = input.ToLower();
 
             if (input == "true")
-            {
                 return true;
-            }
-            else if (input == "false")
-            {
-                return false;
-            }
+            else if (input == "false") return false;
         }
 
         return null;
     }
 
     /// <summary>
-    /// Returns a HtmlFeedLink object from a linktag (link href="" type="")
-    /// only support application/rss and application/atom as type
-    /// if type is not supported, null is returned
+    ///     Returns a HtmlFeedLink object from a link tag (link href="" type="")
+    ///     only support application/rss and application/atom as type
+    ///     if type is not supported, null is returned
     /// </summary>
-    /// <param name="input">link tag, e.g. &lt;link rel="alternate" type="application/rss+xml" title="codehollow &gt; Feed" href="https://codehollow.com/feed/" /&gt;</param>
+    /// <param name="input">
+    ///     link tag, e.g. &lt;link rel="alternate" type="application/rss+xml" title="codehollow &gt; Feed"
+    ///     href="https://codehollow.com/feed/" /&gt;
+    /// </param>
     /// <returns>Parsed HtmlFeedLink</returns>
     public static HtmlFeedLink? GetFeedLinkFromLinkTag(string input)
     {
@@ -291,7 +290,7 @@ public static class Helpers
     }
 
     /// <summary>
-    /// Parses RSS links from html page and returns all links
+    ///     Parses RSS links from html page and returns all links
     /// </summary>
     /// <param name="htmlContent">the content of the html page</param>
     /// <returns>all RSS/feed links</returns>
@@ -299,7 +298,9 @@ public static class Helpers
     {
         // sample link:
         // <link rel="alternate" type="application/rss+xml" title="Microsoft Bot Framework Blog" href="http://blog.botframework.com/feed.xml">
+        // ReSharper disable CommentTypo
         // <link rel="alternate" type="application/atom+xml" title="Aktuelle News von heise online" href="https://www.heise.de/newsticker/heise-atom.xml">
+        // ReSharper restore CommentTypo
 
         var rex = new Regex("<link[^>]*rel=\"alternate\"[^>]*>", RegexOptions.Singleline);
 
@@ -316,7 +317,7 @@ public static class Helpers
     }
 
     /// <summary>
-    /// reads an attribute from an html tag
+    ///     reads an attribute from a html tag
     /// </summary>
     /// <param name="attribute">name of the attribute, e.g. title</param>
     /// <param name="htmlTag">the html tag, e.g. &lt;link title="my title"&gt;</param>
