@@ -22,7 +22,8 @@ public class S3AccountInformation : IS3AccountInformation
 
         return new AmazonS3Client(credentials, new AmazonS3Config
         {
-            ServiceURL = possibleServiceUrl
+            ServiceURL = possibleServiceUrl,
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED
         });
     }
     
