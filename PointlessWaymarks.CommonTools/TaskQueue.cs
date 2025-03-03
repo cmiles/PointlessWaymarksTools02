@@ -16,7 +16,7 @@ public class TaskQueue
     public TaskQueue(bool suspended = false)
     {
         _suspended = suspended;
-        var thread = new Thread(OnStart) {IsBackground = true};
+        var thread = new Thread(OnStart) { IsBackground = true };
         thread.Start();
     }
 
