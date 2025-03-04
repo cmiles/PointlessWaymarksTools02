@@ -34,7 +34,18 @@ public class TaggedDebouncedDelayedTaskQueue
         }
         else
         {
-            if (_debounceTokens.TryGetValue(job.tag, out var existingToken)) existingToken.Cancel();
+            if (_debounceTokens.TryGetValue(job.tag, out var existingToken))
+            {
+                try
+                {
+                    existingToken.Cancel();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return;
+                }
+            }
 
             var cts = new CancellationTokenSource();
             _debounceTokens[job.tag] = cts;
