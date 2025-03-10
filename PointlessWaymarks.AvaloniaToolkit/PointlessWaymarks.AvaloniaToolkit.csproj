@@ -10,9 +10,9 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.5" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.5" />
-    <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.2.0.9" />
+    <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.2.0.14" />
     <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
-    <PackageReference Include="Metalama.Framework" Version="2025.0.8" />
+    <PackageReference Include="Metalama.Framework" Version="2025.0.9" />
     <PackageReference Include="Notification.Avalonia" Version="2.1.0" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="VectSharp.MarkdownCanvas" Version="1.7.0" />
