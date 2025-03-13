@@ -12,7 +12,6 @@
     Name="StatusControlXaml"
     d:DesignHeight="450"
     d:DesignWidth="800"
-    x:CompileBindings="False"
     x:DataType="statusLayer:StatusLayerContext"
     mc:Ignorable="d">
     <Grid
@@ -151,7 +150,7 @@
                                     Height="30"
                                     MaxWidth="400"
                                     Margin="4"
-                                    Command="{Binding DataContext.UserMessageBoxResponseCommand, ElementName=StatusControlXaml}"
+                                    Command="{Binding $parent[TabControl].((statusLayer:StatusLayerContext)DataContext).UserMessageBoxResponseCommand}"
                                     CommandParameter="{Binding MessageText}"
                                     Content="{Binding MessageText}" />
                             </DataTemplate>
@@ -168,6 +167,7 @@
             <avaloniaProgressRing:ProgressRing Margin="0,4,8,0" IsVisible="{Binding NonBlockingTaskAreRunning}" />
             <appToast:AppToastControl
                 Width="300"
+                Opacity=".8"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 DataContext="{Binding Toast}" />

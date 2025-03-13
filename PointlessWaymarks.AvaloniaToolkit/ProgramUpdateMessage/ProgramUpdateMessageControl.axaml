@@ -50,8 +50,8 @@
                     </Button>
                 </Grid>
                 <TextBlock
-                    Height="90"
                     Grid.Row="2"
+                    Height="90"
                     Margin="8"
                     FontSize="14"
                     IsVisible="{Binding Progress, Converter={StaticResource StringIsNotNullOrWhitespaceToBoolean}}"

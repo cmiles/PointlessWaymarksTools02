@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Input;
 using PointlessWaymarks.LlamaAspects;
 using Timer = System.Timers.Timer;
 
@@ -15,7 +16,10 @@ public partial class AppToastContext
         Items = initialItems;
         _toastDisposalTimer = new Timer(1000);
         _toastDisposalTimer.Elapsed += async (_, _) => await HandleToastDisposalTimer();
+        DisposeToastCommand = new AsyncRelayCommand<AppToastMessage>(DisposeToast);
     }
+
+    private AsyncRelayCommand<AppToastMessage> DisposeToastCommand { get; set; }
 
     public ObservableCollection<AppToastMessage> Items { get; set; }
 
@@ -36,9 +40,10 @@ public partial class AppToastContext
         foreach (var loopToDispose in toDispose) Items.Remove(loopToDispose);
     }
 
-    [NonBlockingCommand]
-    public async Task DisposeToast(AppToastMessage toDispose)
+    public async Task DisposeToast(AppToastMessage? toDispose)
     {
+        if (toDispose == null) return;
+
         if (Items.Contains(toDispose))
             try
             {

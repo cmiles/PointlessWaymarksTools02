@@ -1,8 +1,6 @@
 using System.Diagnostics;
-using System.Net.Mime;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Flurl.Http;
 using PointlessWaymarks.AvaloniaToolkit.StatusLayer;
 using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.LlamaAspects;
@@ -33,19 +31,6 @@ public partial class ProgramUpdateMessageContext
     {
         ShowMessage = false;
         return Task.CompletedTask;
-    }
-
-    private static string? GetFileNameFromResponse(IFlurlResponse response)
-    {
-        var contentDisposition = response.Headers.FirstOrDefault(h =>
-            h.Name.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(contentDisposition.Value))
-        {
-            var fileName = new ContentDisposition(contentDisposition.Value).FileName;
-            return fileName?.Trim('"');
-        }
-
-        return null;
     }
 
     private static string GetFileNameFromUrl(string url)
@@ -88,7 +73,7 @@ public partial class ProgramUpdateMessageContext
     [BlockingCommand]
     public async Task Update()
     {
-        var localFile = string.Empty;
+        string localFile;
 
         if (SetupFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {

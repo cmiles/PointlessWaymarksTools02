@@ -35,7 +35,7 @@
                         <Button
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
-                            Command="{Binding $parent[ItemsControl].DataContext.DisposeToastCommand}"
+                            Command="{Binding $parent[ItemsControl].((appToast:AppToastContext)DataContext).DisposeToastCommand}"
                             CommandParameter="{Binding .}">
                             x
                         </Button>
