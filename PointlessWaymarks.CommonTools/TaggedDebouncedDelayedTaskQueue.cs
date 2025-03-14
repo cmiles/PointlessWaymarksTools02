@@ -12,80 +12,85 @@ namespace PointlessWaymarks.CommonTools;
 /// </summary>
 public class TaggedDebouncedDelayedTaskQueue
 {
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _debounceTokens = new();
-    private readonly BlockingCollection<(string tag, Func<Task> taskFunc)> _jobs = new();
-    private readonly List<(string tag, Func<Task>)> _pausedQueue = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _debounceTokens = new();
+    private readonly BlockingCollection<TaggedDebouncedDelayedRequest> _jobs = new();
+    private readonly List<TaggedDebouncedDelayedRequest> _pausedQueue = new();
+    private readonly BlockingCollection<TaggedDebouncedDelayedRequest> _requests = new();
     private bool _suspended;
 
     public TaggedDebouncedDelayedTaskQueue(bool suspended = false)
     {
         _suspended = suspended;
-        var thread = new Thread(OnStart) { IsBackground = true };
-        thread.Start();
+        var jobThread = new Thread(OnJobQueueStart) { IsBackground = true };
+        var requestThread = new Thread(OnRequestQueueStart) { IsBackground = true };
+        jobThread.Start();
+        requestThread.Start();
     }
+
+    public LimitedConcurrentQueue<string> DebouncedRecord { get; set; } = new(255);
 
     public int DebounceMilliseconds { get; set; } = 350;
 
-    public void Enqueue((string tag, Func<Task> taskFunc) job)
+    public LimitedConcurrentQueue<string> RunRecord { get; set; } = new(255);
+
+    public void Enqueue(TaggedDebouncedDelayedRequest job)
     {
         if (_suspended)
-        {
             _pausedQueue.Add(job);
-        }
         else
-        {
-            if (_debounceTokens.TryGetValue(job.tag, out var existingToken))
-            {
-                try
-                {
-                    existingToken.Cancel();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    return;
-                }
-            }
-
-            var cts = new CancellationTokenSource();
-            _debounceTokens[job.tag] = cts;
-
-            Task.Delay(DebounceMilliseconds, cts.Token).ContinueWith(t =>
-            {
-                try
-                {
-                    if (!t.IsCanceled)
-                    {
-                        _jobs.Add(job);
-                        _debounceTokens.TryRemove(job.tag, out _);
-                    }
-                }
-                finally
-                {
-                    try
-                    {
-                        cts.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                }
-            }, TaskScheduler.Default);
-        }
+            _requests.Add(job);
     }
 
-    private void OnStart()
+    private void EnqueueJob(TaggedDebouncedDelayedRequest job)
+    {
+        _jobs.Add(job);
+    }
+
+    private void OnJobQueueStart()
     {
         foreach (var job in _jobs.GetConsumingEnumerable(CancellationToken.None))
             try
             {
-                job.taskFunc.Invoke().Wait();
+                var runTime = DateTimeOffset.Now;
+                job.TaskFunc.Invoke($"{job.Source} - Created {job.CreatedOn}, Run {runTime} ").Wait();
+                RunRecord.Enqueue($"{job.Source} - Created {job.CreatedOn}, Run {runTime} ");
             }
             catch (Exception e)
             {
                 Debug.Print(e.Message);
                 Log.Error(e, "WorkQueue Error");
+            }
+    }
+
+    private void OnRequestQueueStart()
+    {
+        foreach (var job in _requests.GetConsumingEnumerable(CancellationToken.None))
+            try
+            {
+                var runTime = DateTimeOffset.Now;
+
+                if (_debounceTokens.TryGetValue(job.Tag, out var existingToken))
+                {
+                    if (existingToken > runTime)
+                    {
+                        DebouncedRecord.Enqueue(
+                            $"{job.Source} - Requested {job.CreatedOn}, Debounced {DateTimeOffset.Now} ");
+                        continue;
+                    }
+
+                    EnqueueJob(job);
+                    _debounceTokens[job.Tag] = runTime.AddMilliseconds(DebounceMilliseconds);
+                }
+                else
+                {
+                    EnqueueJob(job);
+                    _debounceTokens.TryAdd(job.Tag, runTime.AddMilliseconds(DebounceMilliseconds));
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+                Log.Error(e, "RequestQueue Error");
             }
     }
 
