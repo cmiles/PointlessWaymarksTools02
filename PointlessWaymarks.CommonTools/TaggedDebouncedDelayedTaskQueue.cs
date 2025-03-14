@@ -13,7 +13,6 @@ namespace PointlessWaymarks.CommonTools;
 public class TaggedDebouncedDelayedTaskQueue
 {
     private readonly ConcurrentDictionary<string, DateTimeOffset> _debounceTokens = new();
-    private readonly BlockingCollection<TaggedDebouncedDelayedRequest> _jobs = new();
     private readonly List<TaggedDebouncedDelayedRequest> _pausedQueue = new();
     private readonly BlockingCollection<TaggedDebouncedDelayedRequest> _requests = new();
     private bool _suspended;
@@ -21,9 +20,7 @@ public class TaggedDebouncedDelayedTaskQueue
     public TaggedDebouncedDelayedTaskQueue(bool suspended = false)
     {
         _suspended = suspended;
-        var jobThread = new Thread(OnJobQueueStart) { IsBackground = true };
         var requestThread = new Thread(OnRequestQueueStart) { IsBackground = true };
-        jobThread.Start();
         requestThread.Start();
     }
 
@@ -41,25 +38,31 @@ public class TaggedDebouncedDelayedTaskQueue
             _requests.Add(job);
     }
 
-    private void EnqueueJob(TaggedDebouncedDelayedRequest job)
+    private void ScheduleJob(int millisecondsDelay, TaggedDebouncedDelayedRequest job)
     {
-        _jobs.Add(job);
-    }
-
-    private void OnJobQueueStart()
-    {
-        foreach (var job in _jobs.GetConsumingEnumerable(CancellationToken.None))
-            try
+        try
+        {
+            Task.Run(async () =>
             {
-                var runTime = DateTimeOffset.Now;
-                job.TaskFunc.Invoke($"{job.Source} - Created {job.CreatedOn}, Run {runTime} ").Wait();
-                RunRecord.Enqueue($"{job.Source} - Created {job.CreatedOn}, Run {runTime} ");
-            }
-            catch (Exception e)
-            {
-                Debug.Print(e.Message);
-                Log.Error(e, "WorkQueue Error");
-            }
+                try
+                {
+                    await Task.Delay(millisecondsDelay);
+                    var runTime = DateTimeOffset.Now;
+                    await job.TaskFunc.Invoke($"{job.Source} - Created {job.CreatedOn}, Run {runTime}");
+                    RunRecord.Enqueue($"{job.Source} - Created {job.CreatedOn}, Run {runTime}");
+                }
+                catch (Exception e)
+                {
+                    Debug.Print(e.Message);
+                    Log.Error(e, "ScheduleJob Task.Run Inner Error");
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            Debug.Print(e.Message);
+            Log.Error(e, "ScheduleJob Task Run Outer Error");
+        }
     }
 
     private void OnRequestQueueStart()
@@ -69,28 +72,28 @@ public class TaggedDebouncedDelayedTaskQueue
             {
                 var runTime = DateTimeOffset.Now;
 
-                if (_debounceTokens.TryGetValue(job.Tag, out var existingToken))
+                if (_debounceTokens.TryGetValue(job.Tag, out var existingTime))
                 {
-                    if (existingToken > runTime)
+                    if (existingTime > runTime)
                     {
                         DebouncedRecord.Enqueue(
                             $"{job.Source} - Requested {job.CreatedOn}, Debounced {DateTimeOffset.Now} ");
                         continue;
                     }
 
-                    EnqueueJob(job);
+                    ScheduleJob(DebounceMilliseconds, job);
                     _debounceTokens[job.Tag] = runTime.AddMilliseconds(DebounceMilliseconds);
                 }
                 else
                 {
-                    EnqueueJob(job);
+                    ScheduleJob(DebounceMilliseconds, job);
                     _debounceTokens.TryAdd(job.Tag, runTime.AddMilliseconds(DebounceMilliseconds));
                 }
             }
             catch (Exception e)
             {
                 Debug.Print(e.Message);
-                Log.Error(e, "RequestQueue Error");
+                Log.Error(e, "OnRequestQueueStart Error");
             }
     }
 
