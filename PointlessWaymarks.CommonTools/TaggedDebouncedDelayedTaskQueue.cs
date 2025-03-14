@@ -77,7 +77,7 @@ public class TaggedDebouncedDelayedTaskQueue
                     if (existingTime > runTime)
                     {
                         DebouncedRecord.Enqueue(
-                            $"{job.Source} - Requested {job.CreatedOn}, Debounced {DateTimeOffset.Now} ");
+                            $"{job.Source} - Requested {job.CreatedOn}, Debounced {runTime} ");
                         continue;
                     }
 
