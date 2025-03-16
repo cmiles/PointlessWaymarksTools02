@@ -24,13 +24,18 @@ public partial class ProgramUpdateMessageContext
     public bool ShowMessage { get; set; }
     public StatusLayerContext StatusContext { get; set; }
     public string UpdateMessage { get; set; } = string.Empty;
+    public bool UpdateRunning { get; set; }
     public string UpdateVersion { get; set; } = string.Empty;
 
+    public event EventHandler? UpdateDialogCompleted;
+
     [BlockingCommand]
-    public Task Dismiss()
+    public async Task Dismiss()
     {
+        await UiThreadSwitcher.ResumeBackgroundAsync();
+
+        UpdateDialogCompleted?.Invoke(this, EventArgs.Empty);
         ShowMessage = false;
-        return Task.CompletedTask;
     }
 
     private static string GetFileNameFromUrl(string url)
@@ -44,8 +49,10 @@ public partial class ProgramUpdateMessageContext
     }
 
     //Async expected on this method by convention
-    public Task LoadData(string? currentVersion, string? updateVersion, string? setupFile)
+    public async Task LoadData(string? currentVersion, string? updateVersion, string? setupFile)
     {
+        await UiThreadSwitcher.ResumeBackgroundAsync();
+
         CurrentVersion = currentVersion ?? string.Empty;
         UpdateVersion = updateVersion ?? string.Empty;
         SetupFile = setupFile ?? string.Empty;
@@ -54,8 +61,9 @@ public partial class ProgramUpdateMessageContext
             string.IsNullOrWhiteSpace(SetupFile) ||
             string.Compare(CurrentVersion, UpdateVersion, StringComparison.OrdinalIgnoreCase) >= 0)
         {
+            UpdateDialogCompleted?.Invoke(this, EventArgs.Empty);
             ShowMessage = false;
-            return Task.CompletedTask;
+            return;
         }
 
         UpdateMessage = SetupFile.StartsWith("http", StringComparison.OrdinalIgnoreCase)
@@ -66,45 +74,58 @@ public partial class ProgramUpdateMessageContext
 
         Log.ForContext(nameof(ProgramUpdateMessageContext), this.SafeObjectDump())
             .Information("Program Update Message Context Loaded - Show Update Message {showUpdate}", ShowMessage);
-
-        return Task.CompletedTask;
     }
 
     [BlockingCommand]
     public async Task Update()
     {
-        string localFile;
+        if (UpdateRunning) return;
 
-        if (SetupFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        UpdateRunning = true;
+
+        try
         {
-            Progress = $"Setting Up Download of {SetupFile}";
+            await UiThreadSwitcher.ResumeBackgroundAsync();
 
-            var fileName = GetFileNameFromUrl(SetupFile);
-            localFile = Path.Combine(GetUserDownloadDirectory(), fileName);
+            string localFile;
 
-            await DownloadTools.Download(SetupFile, localFile, (total, current, percent) =>
+            if (SetupFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                Progress =
-                    $"Download Progress:{Environment.NewLine}File Size {FileAndFolderTools.GetBytesReadable(total ?? 0)}{Environment.NewLine}Downloaded {FileAndFolderTools.GetBytesReadable(current)}{Environment.NewLine}Percent Complete {percent:P0}";
-                return false;
-            });
+                Progress = $"Setting Up Download of {SetupFile}";
 
-            Progress = $"Update File {SetupFile} saved to {localFile}";
+                var fileName = GetFileNameFromUrl(SetupFile);
+                localFile = Path.Combine(GetUserDownloadDirectory(), fileName);
 
-            Log.Information("Update File {0} saved to {1}", SetupFile, localFile);
+                await DownloadTools.Download(SetupFile, localFile, (total, current, percent) =>
+                {
+                    Progress =
+                        $"Download Progress:{Environment.NewLine}File Size {FileAndFolderTools.GetBytesReadable(total ?? 0)}{Environment.NewLine}Downloaded {FileAndFolderTools.GetBytesReadable(current)}{Environment.NewLine}Percent Complete {percent:P0}";
+                    return false;
+                });
+
+                Progress = $"Update File {SetupFile} saved to {localFile}";
+
+                Log.Information("Update File {0} saved to {1}", SetupFile, localFile);
+            }
+            else
+            {
+                localFile = SetupFile;
+            }
+
+            await UiThreadSwitcher.ResumeForegroundAsync();
+
+            Progress = $"Starting Update Process - {localFile}";
+            Process.Start(localFile);
+
+            Progress = "Update Process Started - Closing Program";
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopApp)
+                desktopApp.Shutdown();
         }
-        else
+        catch (Exception e)
         {
-            localFile = SetupFile;
+            ShowMessage = false;
+            UpdateRunning = false;
+            throw new Exception($"Unexpected Problem with Program Update: {e.Message}");
         }
-
-        await UiThreadSwitcher.ResumeForegroundAsync();
-
-        Progress = $"Starting Update Process - {localFile}";
-        Process.Start(localFile);
-
-        Progress = "Update Process Started - Closing Program";
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopApp)
-            desktopApp.Shutdown();
     }
 }
