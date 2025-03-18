@@ -1,14 +1,14 @@
 ﻿<UserControl
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
     x:Class="PointlessWaymarks.AvaloniaToolkit.AppToast.AppToastControl"
+    x:CompileBindings="False"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:appToast="clr-namespace:PointlessWaymarks.AvaloniaToolkit.AppToast"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
-    x:DataType="appToast:AppToastContext"
-    mc:Ignorable="d">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <appToast:AppToastTypeToForegroundColorConverter x:Key="AppToastTypeToForegroundColor" />
         <appToast:AppToastTypeToBackgroundColorConverter x:Key="AppToastTypeToBackgroundColor" />
@@ -27,16 +27,16 @@
                 <Border Background="{Binding MessageType, Converter={StaticResource AppToastTypeToBackgroundColor}}" CornerRadius="4">
                     <Grid>
                         <TextBlock
-                            Margin="10"
-                            HorizontalAlignment="Left"
                             Foreground="{Binding MessageType, Converter={StaticResource AppToastTypeToForegroundColor}}"
+                            HorizontalAlignment="Left"
+                            Margin="10"
                             Text="{Binding Message}"
                             TextWrapping="Wrap" />
                         <Button
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
                             Command="{Binding $parent[ItemsControl].((appToast:AppToastContext)DataContext).DisposeToastCommand}"
-                            CommandParameter="{Binding .}">
+                            CommandParameter="{Binding .}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
                             x
                         </Button>
                     </Grid>
