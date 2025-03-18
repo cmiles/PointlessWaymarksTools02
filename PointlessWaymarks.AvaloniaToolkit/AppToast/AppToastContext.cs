@@ -6,7 +6,6 @@ using Timer = System.Timers.Timer;
 namespace PointlessWaymarks.AvaloniaToolkit.AppToast;
 
 [NotifyPropertyChanged]
-[StaThreadConstructorGuard]
 public partial class AppToastContext
 {
     private readonly Timer _toastDisposalTimer;
