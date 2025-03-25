@@ -65,15 +65,30 @@ public class DataGridSelectedItemsBindingBehavior : StyledElementBehavior<DataGr
         }
         else
         {
+            // TODO: Should an error here trigger some sort of re-sync?
             // Remove items from target that are not in changed
             for (var i = target.Count - 1; i >= 0; i--)
                 if (!changed.Contains(target[i]))
-                    target.RemoveAt(i);
+                    try
+                    {
+                        target.RemoveAt(i);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
 
             // Add items to target that are in changed but not in target
             foreach (var item in changed)
                 if (!target.Contains(item))
-                    target.Add(item);
+                    try
+                    {
+                        target.Add(item);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
         }
 
         _pause = false;
