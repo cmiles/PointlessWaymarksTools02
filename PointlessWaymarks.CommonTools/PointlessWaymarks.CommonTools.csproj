@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="AnyClone" Version="1.1.6" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.415.21" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.415.28" />
     <PackageReference Include="CliWrap" Version="3.8.2" />
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1" />
@@ -42,7 +42,7 @@
     <PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageReference Include="Serilog.Exceptions" Version="8.4.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.DelegatingText" Version="1.0.0" />
