@@ -52,8 +52,8 @@
         <PackageReference Include="MathConverter" Version="2.2.1" />
         <PackageReference Include="MdXaml.Plugins" Version="1.27.0" />
         <PackageReference Include="MetadataExtractor" Version="2.8.1" />
-        <PackageReference Include="Metalama.Framework" Version="2025.0.9" />
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
+        <PackageReference Include="Metalama.Framework" Version="2025.0.10" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3179.45" />
         <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.2901" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <PackageReference Include="NetTopologySuite.Features" Version="2.2.0" />
@@ -62,7 +62,7 @@
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
         <PackageReference Include="SharpVectors.Wpf" Version="1.8.4.2" />
         <PackageReference Include="SkiaSharp" Version="3.116.1" />
-        <PackageReference Include="System.Drawing.Common" Version="9.0.3" />
+        <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
         <PackageReference Include="TypeSupport" Version="1.2.0" />
         <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
     </ItemGroup>

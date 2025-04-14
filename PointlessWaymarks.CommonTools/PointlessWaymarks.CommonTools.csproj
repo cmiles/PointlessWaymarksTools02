@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="AnyClone" Version="1.1.6" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.416.7" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.416.9" />
     <PackageReference Include="CliWrap" Version="3.8.2" />
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1" />
