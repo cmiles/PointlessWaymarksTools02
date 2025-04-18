@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Serilog;
+using UtfUnknown;
 
 namespace PointlessWaymarks.CommonTools;
 
@@ -36,30 +37,6 @@ public static class FileAndFolderTools
         stream.Position = 0;
 
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-    }
-
-    /// <summary>
-    ///     Detects common BOM patterns and returns an encoding. !!There are likely missing patterns and certainly this does
-    ///     not cover 'all text files'!! Truly meant as 'Common'.
-    /// </summary>
-    /// <param name="fileBytes"></param>
-    /// <returns></returns>
-    public static Encoding DetectCommonEncodings(byte[] fileBytes)
-    {
-        // Check for common BOM patterns
-        if (fileBytes is [0xEF, 0xBB, 0xBF, ..])
-            return new UTF8Encoding(true); // UTF-8 with BOM
-        if (fileBytes is [0xFF, 0xFE, ..])
-            return Encoding.Unicode; // UTF-16 LE with BOM
-        if (fileBytes is [0xFE, 0xFF, ..])
-            return Encoding.BigEndianUnicode; // UTF-16 BE with BOM
-        if (fileBytes is [0x00, 0x00, 0xFE, 0xFF, ..])
-            return Encoding.UTF32; // UTF-32 BE with BOM
-        if (fileBytes is [0xFF, 0xFE, 0x00, 0x00, ..])
-            return new UTF32Encoding(false, true); // UTF-32 LE with BOM
-
-        // Default to UTF-8 without BOM if no BOM is detected
-        return new UTF8Encoding(false);
     }
 
     /// <summary>
@@ -232,11 +209,14 @@ public static class FileAndFolderTools
         fileStream.CopyTo(memoryStream);
         var fileBytes = memoryStream.ToArray();
 
-        // Detect the encoding, including the BOM
-        var encoding = DetectCommonEncodings(fileBytes);
+        // Use UTF.Unknown to detect encoding
+        var detectionResult = CharsetDetector.DetectFromBytes(fileBytes);
+
+        if (detectionResult.Detected != null && detectionResult.Detected.Confidence > .5)
+            return detectionResult.Detected.Encoding.GetString(fileBytes);
 
         // Decode the bytes into a string, including the BOM if present
-        return encoding.GetString(fileBytes);
+        return Encoding.UTF8.GetString(fileBytes);
     }
 
 
