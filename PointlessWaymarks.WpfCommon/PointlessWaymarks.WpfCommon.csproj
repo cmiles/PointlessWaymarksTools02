@@ -26,6 +26,7 @@
         <None Remove="Icons\information-outline.svg" />
         <None Remove="Icons\pause.svg" />
         <None Remove="Icons\play.svg" />
+        <None Remove="Icons\plus-circle.svg" />
         <None Remove="Icons\refresh-circle.svg" />
         <None Remove="Icons\restart.svg" />
         <None Remove="Icons\rotate-left.svg" />
@@ -116,7 +117,6 @@
         <Resource Include="Icons\rotate-right.svg" />
         <Resource Include="Icons\stop.svg" />
         <Resource Include="Icons\SvgSources.txt" />
-        <None Remove="Icons\plus-circle.svg" />
         <Resource Include="Icons\plus-circle.svg" />
     </ItemGroup>
 
