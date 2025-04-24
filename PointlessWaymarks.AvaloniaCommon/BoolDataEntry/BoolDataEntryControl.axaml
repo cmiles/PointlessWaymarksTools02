@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:svg="using:Avalonia.Svg.Skia"
+             xmlns:boolDataEntry="clr-namespace:PointlessWaymarks.AvaloniaCommon.BoolDataEntry"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PointlessWaymarks.AvaloniaCommon.BoolDataEntry.BoolDataEntryControl"
+             x:DataType="boolDataEntry:IBoolDataEntryContext">
+    <Grid RowDefinitions="Auto,Auto">
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <CheckBox IsChecked="{Binding UserValue}"
+                      Content="{Binding Title}"
+                      IsEnabled="{Binding IsEnabled}">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding HelpText}" 
+                              TextWrapping="Wrap" 
+                              MaxWidth="300"/>
+                </ToolTip.Tip>
+            </CheckBox>
+            
+            <svg:Svg Width="16" Height="16"
+                     Margin="4,0,4,0"
+                     VerticalAlignment="Center"
+                     Path="/Icons/information-outline.svg"
+                     IsVisible="{Binding HasChanges}">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding ReferenceValue, StringFormat='Original Value: {0}', FallbackValue='Previously blank', TargetNullValue='Previously empty'}" />
+                </ToolTip.Tip>
+            </svg:Svg>
+            
+            <svg:Svg Width="16" Height="16"
+                     VerticalAlignment="Center"
+                     Path="/Icons/alert-octagon.svg"
+                     IsVisible="{Binding HasValidationIssues}">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding ValidationMessage}" />
+                </ToolTip.Tip>
+            </svg:Svg>
+        </StackPanel>
+        
+        <TextBlock Grid.Row="1" 
+                   Text="{Binding ValidationMessage}"
+                   IsVisible="{Binding HasValidationIssues}"
+                   Foreground="Red"
+                   TextWrapping="Wrap"/>
+    </Grid>
+</UserControl> 

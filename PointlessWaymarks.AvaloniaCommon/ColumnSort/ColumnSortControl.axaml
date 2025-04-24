@@ -1,0 +1,93 @@
+<UserControl
+    x:Class="PointlessWaymarks.AvaloniaCommon.ColumnSort.ColumnSortControl"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:columnSort="clr-namespace:PointlessWaymarks.AvaloniaCommon.ColumnSort"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:svg="using:Avalonia.Svg.Skia"
+    xmlns:valueConverter="clr-namespace:PointlessWaymarks.AvaloniaCommon.ValueConverter"
+    Name="UserControlXaml"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:DataType="columnSort:ColumnSortControlContext"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <valueConverter:GreaterThanZeroIntIsVisibleElseHiddenConverter x:Key="GreaterThanZeroIntIsVisible" />
+            <valueConverter:AnyNotVisibleToHiddenMultiConverter x:Key="AnyNotVisibleToCollapsed" />
+            <columnSort:AscendingListSortIsVisibleConverter x:Key="AscendingListSortIsVisible" />
+            <columnSort:DescendingListSortIsVisibleConverter x:Key="DescendingListSortIsVisible" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Height="24" Margin="2" Command="{Binding  ((columnSort:ColumnSortControlContext)DataContext).ColumnSortToggleCommand, ElementName=UserControlXaml}" CommandParameter="{Binding .}">
+                        <Grid Width="118">
+                            <StackPanel
+                                Margin="6,0,6,2"
+                                HorizontalAlignment="Center"
+                                Orientation="Horizontal">
+                                <TextBlock
+                                    Margin="6,1,0,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding DisplayName}" />
+                                <Grid>
+                                    <svg:Svg
+                                        Width="12"
+                                        Height="12"
+                                        Margin="6,2,0,2"
+                                        VerticalAlignment="Center"
+                                        Path="/Icons/arrow-up.svg">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="A to Z Sorting" />
+                                        </ToolTip.Tip>
+                                        <Svg.IsVisible>
+                                            <MultiBinding Converter="{StaticResource AnyNotVisibleToCollapsed}">
+                                                <Binding Converter="{StaticResource GreaterThanZeroIntIsVisible}" Path="Order" />
+                                                <Binding Converter="{StaticResource AscendingListSortIsVisible}" Path="SortDirection" />
+                                            </MultiBinding>
+                                        </Svg.IsVisible>
+                                    </svg:Svg>
+                                    <svg:Svg
+                                        Width="12"
+                                        Height="12"
+                                        Margin="6,2,0,0"
+                                        VerticalAlignment="Center"
+                                        Path="/Icons/arrow-down.svg">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Z to A Sorting" />
+                                        </ToolTip.Tip>
+                                        <Svg.IsVisible>
+                                            <MultiBinding Converter="{StaticResource AnyNotVisibleToCollapsed}">
+                                                <Binding Converter="{StaticResource GreaterThanZeroIntIsVisible}" Path="Order" />
+                                                <Binding Converter="{StaticResource DescendingListSortIsVisible}" Path="SortDirection" />
+                                            </MultiBinding>
+                                        </Svg.IsVisible>
+                                    </svg:Svg>
+                                </Grid>
+                                <TextBlock
+                                    Margin="6,0,0,0"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding Order, Converter={StaticResource GreaterThanZeroIntIsVisible}}"
+                                    Text="{Binding Order, StringFormat='({0})'}">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Sort Order" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl> 

@@ -1,0 +1,54 @@
+<UserControl
+    x:Class="PointlessWaymarks.AvaloniaCommon.StringDataEntry.StringDataEntryMultiLineControl"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:stringDataEntry="clr-namespace:PointlessWaymarks.AvaloniaCommon.StringDataEntry"
+    xmlns:svg="using:Avalonia.Svg.Skia"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:DataType="stringDataEntry:IStringDataEntryContext"
+    mc:Ignorable="d">
+    <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal">
+            <Label
+                VerticalAlignment="Center"
+                Content="{Binding Title}"
+                Target="ValueTextBox">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding HelpText}" />
+                </ToolTip.Tip>
+            </Label>
+
+            <svg:Svg
+                Width="16"
+                Height="16"
+                Margin="0,0,4,0"
+                VerticalAlignment="Center"
+                IsVisible="{Binding HasChanges}"
+                Path="/Icons/information-outline.svg">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding ReferenceValue, StringFormat='Original Value: {0}'}" />
+                </ToolTip.Tip>
+            </svg:Svg>
+
+            <svg:Svg
+                Width="16"
+                Height="16"
+                VerticalAlignment="Center"
+                IsVisible="{Binding HasValidationIssues}"
+                Path="/Icons/alert-octagon.svg">
+                <ToolTip.Tip>
+                    <TextBlock Text="{Binding ValidationMessage}" />
+                </ToolTip.Tip>
+            </svg:Svg>
+        </StackPanel>
+
+        <TextBox
+            Name="ValueTextBox"
+            AcceptsReturn="True"
+            Text="{Binding UserValue}"
+            TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl> 

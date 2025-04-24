@@ -1,0 +1,97 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Icons\alert-octagon.svg" />
+    <None Remove="Icons\alert.svg" />
+    <None Remove="Icons\arrow-down-thick.svg" />
+    <None Remove="Icons\arrow-down.svg" />
+    <None Remove="Icons\arrow-left-circle.svg" />
+    <None Remove="Icons\arrow-right-circle.svg" />
+    <None Remove="Icons\arrow-up-thick.svg" />
+    <None Remove="Icons\arrow-up.svg" />
+    <None Remove="Icons\camera-outline.svg" />
+    <None Remove="Icons\close.svg" />
+    <None Remove="Icons\file-code-outline.svg" />
+    <None Remove="Icons\file-jpg-box.svg" />
+    <None Remove="Icons\folder-file-outline.svg" />
+    <None Remove="Icons\home-circle.svg" />
+    <None Remove="Icons\image-outline.svg" />
+    <None Remove="Icons\information-outline.svg" />
+    <None Remove="Icons\pause.svg" />
+    <None Remove="Icons\play.svg" />
+    <None Remove="Icons\plus-circle.svg" />
+    <None Remove="Icons\refresh-circle.svg" />
+    <None Remove="Icons\restart.svg" />
+    <None Remove="Icons\rotate-left.svg" />
+    <None Remove="Icons\rotate-right.svg" />
+    <None Remove="Icons\stop.svg" />
+    <None Remove="Icons\video-outline.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.8" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.8" />
+    <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.7.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.8" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.8" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.8" />
+    <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.2.7" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.0.3" />
+    <PackageReference Include="Clowd.Clipboard.Avalonia" Version="1.1.4" />
+    <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
+    <PackageReference Include="MarkdownViewer.Core" Version="1.0.1" />
+    <PackageReference Include="Metalama.Framework" Version="2025.0.10" />
+    <PackageReference Include="Notification.Avalonia" Version="2.1.0" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="TypeSupport" Version="1.2.0" />
+    <PackageReference Include="VectSharp.MarkdownCanvas" Version="1.7.0" />
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.2.8">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PointlessWaymarks.AvaloniaLlamaAspects\PointlessWaymarks.AvaloniaLlamaAspects.csproj" />
+    <ProjectReference Include="..\PointlessWaymarks.CommonTools\PointlessWaymarks.CommonTools.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icons\alert-octagon.svg" />
+    <Resource Include="Icons\alert.svg" />
+    <Resource Include="Icons\arrow-down-thick.svg" />
+    <Resource Include="Icons\arrow-down.svg" />
+    <Resource Include="Icons\arrow-left-circle.svg" />
+    <Resource Include="Icons\arrow-right-circle.svg" />
+    <Resource Include="Icons\arrow-up-thick.svg" />
+    <Resource Include="Icons\arrow-up.svg" />
+    <Resource Include="Icons\camera-outline.svg" />
+    <Resource Include="Icons\close.svg" />
+    <Resource Include="Icons\file-code-outline.svg" />
+    <Resource Include="Icons\file-jpg-box.svg" />
+    <Resource Include="Icons\folder-file-outline.svg" />
+    <Resource Include="Icons\home-circle.svg" />
+    <Resource Include="Icons\image-outline.svg" />
+    <Resource Include="Icons\information-outline.svg" />
+    <Resource Include="Icons\pause.svg" />
+    <Resource Include="Icons\play.svg" />
+    <Resource Include="Icons\plus-circle.svg" />
+    <Resource Include="Icons\refresh-circle.svg" />
+    <Resource Include="Icons\restart.svg" />
+    <Resource Include="Icons\rotate-left.svg" />
+    <Resource Include="Icons\rotate-right.svg" />
+    <Resource Include="Icons\stop.svg" />
+    <Resource Include="Icons\video-outline.svg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Status\StatusControl.axaml.cs">
+      <DependentUpon>StatusControl.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,47 @@
+<UserControl
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="PointlessWaymarks.AvaloniaCommon.AppToast.AppToastControl"
+    x:CompileBindings="False"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:appToast="clr-namespace:PointlessWaymarks.AvaloniaCommon.AppToast">
+    <UserControl.Resources>
+        <appToast:AppToastTypeToForegroundColorConverter x:Key="AppToastTypeToForegroundColor" />
+        <appToast:AppToastTypeToBackgroundColorConverter x:Key="AppToastTypeToBackgroundColor" />
+    </UserControl.Resources>
+    <ListBox
+        Background="Transparent"
+        BorderThickness="0"
+        ItemsSource="{Binding Items}">
+        <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+                <Setter Property="Padding" Value="1" />
+            </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+            <DataTemplate DataType="appToast:AppToastMessage">
+                <Border Background="{Binding MessageType, Converter={StaticResource AppToastTypeToBackgroundColor}}" CornerRadius="4">
+                    <Grid>
+                        <TextBlock
+                            Foreground="{Binding MessageType, Converter={StaticResource AppToastTypeToForegroundColor}}"
+                            HorizontalAlignment="Left"
+                            Margin="10"
+                            Text="{Binding Message}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Command="{Binding $parent[ItemsControl].((appToast:AppToastContext)DataContext).DisposeToastCommand}"
+                            CommandParameter="{Binding .}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                            x
+                        </Button>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+</UserControl>
