@@ -78,7 +78,7 @@ public static class S3Tools
             }
 
             listRequest.ContinuationToken = response.NextContinuationToken;
-        } while (response.IsTruncated);
+        } while (response.IsTruncated ?? true);
 
         var collectedObjectsAndMetadata = new ConcurrentBag<S3RemoteFileAndMetadata>();
 
