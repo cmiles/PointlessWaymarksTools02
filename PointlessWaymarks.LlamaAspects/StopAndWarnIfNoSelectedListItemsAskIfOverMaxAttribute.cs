@@ -48,7 +48,7 @@ public class StopAndWarnIfNoSelectedListItemsAskIfOverMaxAttribute : OverrideMet
 
         if (frozenSelected.Count >= this.MaxSelectedItems)
             if (await meta.This.StatusContext.ShowMessage($"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(this.ActionVerb.ToLowerInvariant())} Multiple Items",
-                    $"You are about to {this.ActionVerb.ToLowerInvariant()} {frozenSelected.Count} items - do you really want to {this.ActionVerb.ToLowerInvariant()} all of these items?{Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine, titleList)}",
+                    $"You are about to {this.ActionVerb.ToLowerInvariant()} {frozenSelected.Count} items - do you really want to {this.ActionVerb.ToLowerInvariant()} all of these items?{Environment.NewLine}{Environment.NewLine}{string.Join($"{Environment.NewLine}  - ", titleList)}",
                     new List<string> { "Yes", "No" }) == "No")
                 meta.Return();
 
