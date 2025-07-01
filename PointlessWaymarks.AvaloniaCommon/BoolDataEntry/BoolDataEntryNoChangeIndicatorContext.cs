@@ -13,14 +13,14 @@ public partial class BoolDataEntryNoChangeIndicatorContext : IHasValidationIssue
         PropertyChanged += OnPropertyChanged;
     }
 
-    public List<Func<bool?, IsValid>> ValidationFunctions { get; set; } = [];
+    public List<Func<bool, IsValid>> ValidationFunctions { get; set; } = [];
 
     public string HelpText { get; set; } = string.Empty;
     public bool IsEnabled { get; set; } = true;
     public string Title { get; set; } = string.Empty;
-    public bool? UserValue { get; set; }
+    public bool UserValue { get; set; }
     public bool HasChanges => false;
-    public bool? ReferenceValue => false;
+    public bool ReferenceValue => false;
     public bool UserValueIsNullable => false;
     public string ValidationMessage { get; set; } = string.Empty;
     public bool HasValidationIssues { get; set; }

@@ -18,5 +18,10 @@ namespace PointlessWaymarks.AvaloniaCommon.Utility
             toPosition.Show();
         }
 
+        public static void PositionWindowAndShow(this Window toPosition)
+        {
+            toPosition.Show();
+        }
+
     }
 }

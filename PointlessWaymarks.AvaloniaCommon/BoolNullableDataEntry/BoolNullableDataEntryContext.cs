@@ -3,30 +3,31 @@ using PointlessWaymarks.AvaloniaCommon.ChangesAndValidation;
 using PointlessWaymarks.AvaloniaLlamaAspects;
 using PointlessWaymarks.CommonTools;
 
-namespace PointlessWaymarks.AvaloniaCommon.BoolDataEntry;
+namespace PointlessWaymarks.AvaloniaCommon.BoolNullableDataEntry;
 
 [NotifyPropertyChanged]
-public partial class BoolDataEntryContext : IHasChanges, IHasValidationIssues, IBoolDataEntryContext
+public partial class BoolNullableDataEntryContext : IHasChanges, IHasValidationIssues, IBoolNullableDataEntryContext
 {
-    private BoolDataEntryContext()
+    private BoolNullableDataEntryContext()
     {
         PropertyChanged += OnPropertyChanged;
     }
 
-    public bool ReferenceValue { get; set; }
-    public List<Func<bool, IsValid>> ValidationFunctions { get; set; } = [];
+    public bool? ReferenceValue { get; set; }
+    public bool? UserValue { get; set; }
+    public List<Func<bool?, IsValid>> ValidationFunctions { get; set; } = [];
 
     public string HelpText { get; set; } = string.Empty;
     public bool IsEnabled { get; set; } = true;
     public string Title { get; set; } = string.Empty;
-    public bool UserValue { get; set; }
 
-    public bool UserValueIsNullable => false;
+    public bool UserValueIsNullable => true;
     public string ValidationMessage { get; set; } = string.Empty;
     public bool HasChanges { get; set; }
     public bool HasValidationIssues { get; set; }
+    
 
-    public void CheckForChangesAndValidate()
+    private void CheckForChangesAndValidate()
     {
         HasChanges = UserValue != ReferenceValue;
 
@@ -46,9 +47,9 @@ public partial class BoolDataEntryContext : IHasChanges, IHasValidationIssues, I
         ValidationMessage = string.Empty;
     }
 
-    public static Task<BoolDataEntryContext> CreateInstance()
+    public static BoolNullableDataEntryContext CreateInstance()
     {
-        return Task.FromResult(new BoolDataEntryContext());
+        return new BoolNullableDataEntryContext();
     }
 
     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
