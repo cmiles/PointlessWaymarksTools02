@@ -23,13 +23,13 @@
 
   <ItemGroup>
     <PackageReference Include="AnyClone" Version="1.1.6" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.3.1" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.4.1" />
     <PackageReference Include="CliWrap" Version="3.9.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1" />
     <PackageReference Include="Flurl.Http" Version="4.0.2" />
     <PackageReference Include="Markdig" Version="0.41.3" />
-    <PackageReference Include="Metalama.Framework" Version="2025.1.9" />
+    <PackageReference Include="Metalama.Framework" Version="2025.1.10" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.6" />
     <PackageReference Include="ObjectDumper.NET" Version="4.3.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />
