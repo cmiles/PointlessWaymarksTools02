@@ -83,7 +83,7 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
 
     protected override void OnAttached()
     {
-        var htmlTempDirectory = FileLocationTools.TempStorageHtmlDirectory();
+        var htmlTempDirectory = FileLocationTools.TempStorageWebViewVirtualDomainDirectory();
         if (!File.Exists(Path.Combine(htmlTempDirectory.FullName, "favicon.ico")))
             File.WriteAllText(Path.Combine(htmlTempDirectory.FullName, "favicon.ico"), HtmlTools.FavIconIco());
 

@@ -86,9 +86,20 @@ public static class FileLocationTools
         return directory;
     }
 
-    public static DirectoryInfo TempStorageHtmlDirectory()
+    public static DirectoryInfo TempStorageWebViewVirtualDomainDirectory()
     {
-        var directory = new DirectoryInfo(Path.Combine(DefaultStorageDirectory().FullName, "LocalHtml"));
+        var directory = new DirectoryInfo(Path.Combine(DefaultStorageDirectory().FullName, "WebViewVirtualHtml"));
+
+        if (!directory.Exists) directory.Create();
+
+        directory.Refresh();
+
+        return directory;
+    }
+
+    public static DirectoryInfo TempStorageAppLocalHtmlDirectory()
+    {
+        var directory = new DirectoryInfo(Path.Combine(DefaultStorageDirectory().FullName, "AppLocalHtml"));
 
         if (!directory.Exists) directory.Create();
 

@@ -14,6 +14,15 @@ public partial class StatusControlContext
     private int _countOfRunningBlockingTasks;
     private int _countOfRunningNonBlockingTasks;
 
+    /// <summary>
+    /// Must be called on the UI thread
+    /// </summary>
+    public StatusControlContext()
+        : this(new AppToastContext([]))
+    {
+    }
+
+
     public StatusControlContext(AppToastContext toastContext)
     {
         ContextDispatcher = Dispatcher.UIThread;
