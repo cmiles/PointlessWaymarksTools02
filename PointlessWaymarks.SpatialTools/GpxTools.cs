@@ -146,12 +146,7 @@ public static class GpxTools
 
         try
         {
-            parsedGpx = GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
-                new GpxReaderSettings
-                {
-                    IgnoreUnexpectedChildrenOfTopLevelElement = true,
-                    IgnoreVersionAttribute = true
-                });
+            parsedGpx = await ReadGpxFile(gpxFile, progress);
         }
         catch (Exception e)
         {
@@ -258,6 +253,27 @@ public static class GpxTools
         return (featureCollection, boundingBox);
     }
 
+    /// <summary>
+    /// Prefer this method when reading a GPX file to get standardized settings and any pre-processing
+    /// done in a standardized way for this codebase.
+    /// </summary>
+    /// <param name="gpxFile"></param>
+    /// <param name="progress"></param>
+    /// <returns></returns>
+    public static async Task<GpxFile> ReadGpxFile(
+        FileInfo gpxFile, IProgress<string>? progress = null)
+    {
+        return GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
+            new GpxReaderSettings
+            {
+                BuildWebLinksForVeryLongUriValues = true,
+                IgnoreBadDateTime = true,
+                IgnoreUnexpectedChildrenOfTopLevelElement = true,
+                IgnoreVersionAttribute = true,
+                DefaultCreatorIfMissing = "Unknown"
+            });
+    }
+
     public static async Task<List<GpxTrackInformation>> TracksFromGpxFile(
         FileInfo gpxFile, IProgress<string>? progress = null)
     {
@@ -265,12 +281,7 @@ public static class GpxTools
 
         if (gpxFile is not { Exists: true }) return returnList;
 
-        var parsedGpx = GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
-            new GpxReaderSettings
-            {
-                IgnoreUnexpectedChildrenOfTopLevelElement = true,
-                IgnoreVersionAttribute = true
-            });
+        var parsedGpx = await ReadGpxFile(gpxFile, progress);
 
         var trackCounter = 0;
 
@@ -286,12 +297,7 @@ public static class GpxTools
 
     public static async Task<(List<Feature> features, Envelope boundingBox)> WaypointPointsFromGpxFile(FileInfo gpxFile)
     {
-        var parsedGpx = GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
-            new GpxReaderSettings
-            {
-                IgnoreUnexpectedChildrenOfTopLevelElement = true,
-                IgnoreVersionAttribute = true
-            });
+        var parsedGpx = await ReadGpxFile(gpxFile);
 
         var returnList = new List<Feature>();
 
