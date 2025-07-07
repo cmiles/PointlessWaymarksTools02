@@ -6,7 +6,7 @@ using PointlessWaymarks.CommonTools;
 namespace PointlessWaymarks.AvaloniaCommon.BoolDataEntry;
 
 [NotifyPropertyChanged]
-public partial class BoolNullableDataEntryContext : IHasChanges, IHasValidationIssues, IBoolDataEntryContext
+public partial class BoolNullableDataEntryContext : IHasChanges, IHasValidationIssues
 {
     private BoolNullableDataEntryContext()
     {
