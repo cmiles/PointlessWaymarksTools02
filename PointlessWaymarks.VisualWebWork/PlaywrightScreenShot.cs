@@ -54,6 +54,7 @@ public static class PlaywrightScreenShot
             document.querySelector('body').style.overflow='hidden';
         ");
 
+
             // Hide elements that match the provided selectors
             if (hideElementSelectors != null && hideElementSelectors.Any())
             {
@@ -79,6 +80,53 @@ public static class PlaywrightScreenShot
             var viewportHeight = await page.EvaluateAsync<int>("window.innerHeight");
             var viewportWidth = await page.EvaluateAsync<int>("window.innerWidth");
 
+            // Get document height to check if we need to handle fixed/sticky elements
+            var documentHeight = await page.EvaluateAsync<int>("""
+
+                                                                   Math.max(
+                                                                       document.documentElement.clientHeight,
+                                                                       document.body ? document.body.scrollHeight : 0,
+                                                                       document.documentElement.scrollHeight,
+                                                                       document.body ? document.body.offsetHeight : 0,
+                                                                       document.documentElement.offsetHeight
+                                                                   )
+
+                                                               """);
+
+            // If document is taller than viewport, convert fixed/sticky elements to absolute
+            if (documentHeight > viewportHeight)
+            {
+                progress?.Report(
+                    "Document height greater than viewport height - Converting fixed and sticky positions to absolute");
+
+                await page.EvaluateAsync("""
+
+                                                 var elements = document.querySelectorAll('*');
+                                                 for (var i = 0; i < elements.length; i++) {
+                                                     var elementStyle = getComputedStyle(elements[i]);
+                                                     if (elementStyle.position === 'fixed' || elementStyle.position === 'sticky') {
+                                                         elements[i].style.position = 'absolute';
+                                                     }
+                                                 }
+                                             
+                                         """);
+
+                // Re-measure document height after changing positions
+                documentHeight = await page.EvaluateAsync<int>("""
+
+                                                                       Math.max(
+                                                                           document.documentElement.clientHeight,
+                                                                           document.body ? document.body.scrollHeight : 0,
+                                                                           document.documentElement.scrollHeight,
+                                                                           document.body ? document.body.offsetHeight : 0,
+                                                                           document.documentElement.offsetHeight
+                                                                       )
+                                                                   
+                                                               """);
+
+                progress?.Report($"Updated document height after position conversion: {documentHeight}px");
+            }
+
             progress?.Report($"Viewport Height {viewportHeight}, Width {viewportWidth}");
 
             // Horizontal chunks calculation remains the same
@@ -95,6 +143,18 @@ public static class PlaywrightScreenShot
             // Continue scrolling and capturing until we reach the end of the page or maxHeight
             while (!isEndOfPage && (!maxHeight.HasValue || accumulatedHeight < maxHeight.Value))
             {
+                await page.EvaluateAsync("""
+
+                                                 var elements = document.querySelectorAll('*');
+                                                 for (var i = 0; i < elements.length; i++) {
+                                                     var elementStyle = getComputedStyle(elements[i]);
+                                                     if (elementStyle.position === 'fixed' || elementStyle.position === 'sticky') {
+                                                         elements[i].style.position = 'absolute';
+                                                     }
+                                                 }
+                                             
+                                         """);
+                
                 rowIndex++;
                 progress?.Report($"Processing Row {rowIndex}");
 
@@ -282,9 +342,11 @@ public static class PlaywrightScreenShot
     {
         try
         {
+            progress?.Report("Initializing Playwright");
+
             await EnsurePlaywrightInitialized();
 
-            progress?.Report("Initializing Playwright");
+            progress?.Report("Setting Up Playwright");
 
             using var playwright = await Playwright.CreateAsync();
             await using var browser =
@@ -297,8 +359,25 @@ public static class PlaywrightScreenShot
             // Set initial viewport size
             await page.SetViewportSizeAsync(browserWidth, 1080);
 
+            progress?.Report("Waiting for page to load...");
+
             await page.GotoAsync(url);
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+            try
+            {
+                await page.WaitForLoadStateAsync(LoadState.NetworkIdle,
+                    new PageWaitForLoadStateOptions { Timeout = 60000 });
+            }
+            catch (TimeoutException ex)
+            {
+                progress?.Report(
+                    $"Warning: Network activity did not become idle within 60 seconds. Continuing with screenshot anyway. Details: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                progress?.Report(
+                    $"Non-critical error while waiting for page to load: {ex.Message}. Continuing with screenshot.");
+            }
 
             return await CapturePageScreenshot(page, progress, browserWidth, maxHeight, hideElementSelectors);
         }
