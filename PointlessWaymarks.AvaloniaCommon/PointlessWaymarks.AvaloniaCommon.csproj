@@ -38,6 +38,7 @@
         <None Remove="Icons\video-outline.svg" />
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="AngleSharp.Js" Version="1.0.0-beta.43" />
         <PackageReference Include="Avalonia" Version="11.3.2" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
         <PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
@@ -49,6 +50,7 @@
         <PackageReference Include="BinToss.GroupBox.Avalonia" Version="1.0.0" />
         <PackageReference Include="Clowd.Clipboard.Avalonia" Version="1.1.4" />
         <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
+        <PackageReference Include="DynamicData" Version="9.4.1" />
         <PackageReference Include="MarkdownViewer.Core" Version="1.0.4" />
         <PackageReference Include="Metalama.Framework" Version="2025.1.10" />
         <PackageReference Include="Notification.Avalonia" Version="2.1.0" />
