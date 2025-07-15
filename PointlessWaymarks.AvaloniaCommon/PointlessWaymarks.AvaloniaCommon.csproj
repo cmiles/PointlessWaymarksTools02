@@ -51,6 +51,7 @@
         <PackageReference Include="Clowd.Clipboard.Avalonia" Version="1.1.4" />
         <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
         <PackageReference Include="DynamicData" Version="9.4.1" />
+        <PackageReference Include="Jint" Version="4.4.0" />
         <PackageReference Include="MarkdownViewer.Core" Version="1.0.4" />
         <PackageReference Include="Metalama.Framework" Version="2025.1.10" />
         <PackageReference Include="Notification.Avalonia" Version="2.1.0" />

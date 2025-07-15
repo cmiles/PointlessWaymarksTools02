@@ -10,6 +10,16 @@ namespace PointlessWaymarks.AvaloniaCommon.LocalHtml;
 
 public class AppPageServer : IDisposable, IAsyncDisposable
 {
+    private static AppPageServer? _staticAppPageServer;
+    public static async Task<AppPageServer> GetInstance()
+    {
+        if (_staticAppPageServer is not null) return _staticAppPageServer;
+
+        _staticAppPageServer = new AppPageServer();
+        await _staticAppPageServer.StartServer();
+        return _staticAppPageServer;
+    }
+    
     private WebApplication? _app;
     private CancellationTokenSource? _cancellationTokenSource;
     public int ServerPort { get; } = FreeTcpPort();
