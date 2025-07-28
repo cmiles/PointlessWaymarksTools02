@@ -1,4 +1,5 @@
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 using PointlessWaymarks.CommonTools;
 
 namespace PointlessWaymarks.SpatialTools;
@@ -13,7 +14,7 @@ public static class DistanceTools
     /// <param name="longitude"></param>
     /// <param name="latitude"></param>
     /// <returns></returns>
-    private static double ApproximateMetersToLatitudeDegrees(double meters, double longitude, double latitude)
+    public static double ApproximateMetersToLatitudeDegrees(double meters, double longitude, double latitude)
     {
         var compLatitude = latitude switch
         {
@@ -34,7 +35,7 @@ public static class DistanceTools
     /// <param name="longitude"></param>
     /// <param name="latitude"></param>
     /// <returns></returns>
-    private static double ApproximateMetersToLongitudeDegrees(double meters, double longitude, double latitude)
+    public static double ApproximateMetersToLongitudeDegrees(double meters, double longitude, double latitude)
     {
         var complongitude = longitude switch
         {
@@ -46,7 +47,7 @@ public static class DistanceTools
 
         return meters / oneDegreeMetersDistance;
     }
-
+    
     public static double GetDistanceInMeters(double longitude, double latitude,
         double otherLongitude, double otherLatitude)
     {

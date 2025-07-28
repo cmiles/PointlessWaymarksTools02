@@ -59,6 +59,32 @@ public static class GpxTools
         return feature;
     }
 
+    public static Feature LineFeatureFromGpxRouteBuffered(GpxRouteInformation routeInformation, double bufferInFeet)
+    {
+        if (bufferInFeet <= 0) return LineFeatureFromGpxRoute(routeInformation);
+
+        // ReSharper disable once CoVariantArrayConversion
+        var newLine = new LineString(routeInformation.Track.ToArray());
+
+        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+        var longitudeDegrees
+            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+
+        var bufferedLine = newLine.Buffer((latitudeDegrees + longitudeDegrees) / 2D);
+        
+        var feature = new Feature
+        {
+            Geometry = bufferedLine,
+            BoundingBox = GeoJsonTools.GeometryBoundingBox([newLine]),
+            Attributes = new AttributesTable()
+        };
+
+        feature.Attributes.Add("title", routeInformation.Name);
+        feature.Attributes.Add("description", routeInformation.Description);
+
+        return feature;
+    }
+
     public static Feature LineFeatureFromGpxTrack(GpxTrackInformation trackInformation)
     {
         // ReSharper disable once CoVariantArrayConversion
@@ -74,6 +100,53 @@ public static class GpxTools
         feature.Attributes.Add("description", trackInformation.Description);
 
         return feature;
+    }
+
+    public static Feature LineFeatureFromGpxTrackBuffered(GpxTrackInformation trackInformation, double bufferInFeet)
+    {
+        if (bufferInFeet <= 0) return LineFeatureFromGpxTrack(trackInformation);
+        
+        // ReSharper disable once CoVariantArrayConversion
+        var newLine = new LineString(trackInformation.Track.ToArray());
+
+        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+        var longitudeDegrees
+            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+
+        var bufferedLine = newLine.Buffer((latitudeDegrees + longitudeDegrees) / 2D);
+
+        var feature = new Feature
+        {
+            Geometry = bufferedLine,
+            BoundingBox = GeoJsonTools.GeometryBoundingBox([newLine]),
+            Attributes = new AttributesTable()
+        };
+
+        feature.Attributes.Add("title", trackInformation.Name);
+        feature.Attributes.Add("description", trackInformation.Description);
+
+        return feature;
+    }
+
+    /// <summary>
+    ///     Prefer this method when reading a GPX file to get standardized settings and any pre-processing
+    ///     done in a standardized way for this codebase.
+    /// </summary>
+    /// <param name="gpxFile"></param>
+    /// <param name="progress"></param>
+    /// <returns></returns>
+    public static async Task<GpxFile> ReadGpxFile(
+        FileInfo gpxFile, IProgress<string>? progress = null)
+    {
+        return GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
+            new GpxReaderSettings
+            {
+                BuildWebLinksForVeryLongUriValues = true,
+                IgnoreBadDateTime = true,
+                IgnoreUnexpectedChildrenOfTopLevelElement = true,
+                IgnoreVersionAttribute = true,
+                DefaultCreatorIfMissing = "Unknown"
+            });
     }
 
     public static GpxRouteInformation RouteInformationFromGpxRoute(GpxRoute toConvert)
@@ -118,7 +191,7 @@ public static class GpxTools
         return new GpxRouteInformation(nameAndLabelAndType, descriptionAndComment, pointList);
     }
 
-    public static async Task<(List<Feature> features, Envelope boundingBox)> RouteLinesFromGpxFile(FileInfo gpxFile)
+    public static async Task<(List<Feature> features, Envelope boundingBox)> RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
         var gpxInfo = await RoutesFromGpxFile(gpxFile);
 
@@ -127,7 +200,7 @@ public static class GpxTools
 
         foreach (var loopGpxInfo in gpxInfo)
         {
-            var feature = LineFeatureFromGpxRoute(loopGpxInfo);
+            var feature = LineFeatureFromGpxRouteBuffered(loopGpxInfo, bufferInFeet);
             boundingBox.ExpandToInclude(feature.BoundingBox);
             featureCollection.Add(feature);
         }
@@ -253,25 +326,21 @@ public static class GpxTools
         return (featureCollection, boundingBox);
     }
 
-    /// <summary>
-    /// Prefer this method when reading a GPX file to get standardized settings and any pre-processing
-    /// done in a standardized way for this codebase.
-    /// </summary>
-    /// <param name="gpxFile"></param>
-    /// <param name="progress"></param>
-    /// <returns></returns>
-    public static async Task<GpxFile> ReadGpxFile(
-        FileInfo gpxFile, IProgress<string>? progress = null)
+    public static async Task<(List<Feature> features, Envelope boundingBox)> TrackLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
-        return GpxFile.Parse(await File.ReadAllTextAsync(gpxFile.FullName).ConfigureAwait(false),
-            new GpxReaderSettings
-            {
-                BuildWebLinksForVeryLongUriValues = true,
-                IgnoreBadDateTime = true,
-                IgnoreUnexpectedChildrenOfTopLevelElement = true,
-                IgnoreVersionAttribute = true,
-                DefaultCreatorIfMissing = "Unknown"
-            });
+        var gpxInfo = await TracksFromGpxFile(gpxFile);
+
+        var featureCollection = new List<Feature>();
+        var boundingBox = new Envelope();
+
+        foreach (var loopGpxInfo in gpxInfo)
+        {
+            var feature = LineFeatureFromGpxTrackBuffered(loopGpxInfo, bufferInFeet);
+            boundingBox.ExpandToInclude(feature.BoundingBox);
+            featureCollection.Add(feature);
+        }
+
+        return (featureCollection, boundingBox);
     }
 
     public static async Task<List<GpxTrackInformation>> TracksFromGpxFile(
@@ -329,8 +398,41 @@ public static class GpxTools
         return (returnList, bounds);
     }
 
+    public static async Task<(List<Feature> features, Envelope boundingBox)> WaypointPointsFromGpxFileAs2DCircles(
+        FileInfo gpxFile, int? bufferRadiusInFeet)
+    {
+        var parsedGpx = await ReadGpxFile(gpxFile);
+
+        var returnList = new List<Feature>();
+
+        var bounds = new Envelope();
+
+        foreach (var loopWaypoint in parsedGpx.Waypoints)
+        {
+            var attributeTable = new AttributesTable
+            {
+                { "title", loopWaypoint.Name },
+                { "description", loopWaypoint.Description }
+            };
+
+            var point = PointTools.Wgs84Point(loopWaypoint.Longitude, loopWaypoint.Latitude);
+            returnList.Add(new Feature(
+                bufferRadiusInFeet > 0 ? PointTools.CreateCircle(point, bufferRadiusInFeet.Value) : point,
+                attributeTable));
+            bounds.ExpandToInclude(point.Coordinate);
+        }
+
+        return (returnList, bounds);
+    }
+
     public record GpxRouteInformation(string Name, string Description, List<CoordinateZ> Track);
 
-    public record GpxTrackInformation(string Name, string Description, DateTime? StartsOnLocal, DateTime? EndsOnLocal,
-        DateTime? StartsOnUtc, DateTime? EndsOnUtc, List<CoordinateZ> Track);
+    public record GpxTrackInformation(
+        string Name,
+        string Description,
+        DateTime? StartsOnLocal,
+        DateTime? EndsOnLocal,
+        DateTime? StartsOnUtc,
+        DateTime? EndsOnUtc,
+        List<CoordinateZ> Track);
 }
