@@ -59,6 +59,28 @@ public static class GeoJsonTools
         return serializer.Deserialize<T>(new JsonTextReader(new StringReader(toDeserialize)));
     }
 
+    public static Geometry EnvelopeToGeometry(Envelope envelope)
+    {
+        // Create a GeometryFactory
+        var geometryFactory = new GeometryFactory();
+
+        // Create coordinates for the corners of the envelope
+        var coordinates = new Coordinate[]
+        {
+            new(envelope.MinX, envelope.MinY),
+            new(envelope.MaxX, envelope.MinY),
+            new(envelope.MaxX, envelope.MaxY),
+            new(envelope.MinX, envelope.MaxY),
+            new(envelope.MinX, envelope.MinY) // Close the ring
+        };
+
+        // Create a linear ring from the coordinates
+        var ring = geometryFactory.CreateLinearRing(coordinates);
+
+        // Create a polygon from the ring
+        return geometryFactory.CreatePolygon(ring);
+    }
+
     public static List<Geometry> FeatureCollectionToGeometries(FeatureCollection featureCollection)
     {
         return featureCollection.Select(x => Wgs84GeometryFactory().CreateGeometry(x.Geometry))

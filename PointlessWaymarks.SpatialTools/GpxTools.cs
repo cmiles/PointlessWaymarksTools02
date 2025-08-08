@@ -191,18 +191,19 @@ public static class GpxTools
         return new GpxRouteInformation(nameAndLabelAndType, descriptionAndComment, pointList);
     }
 
-    public static async Task<(List<Feature> features, Envelope boundingBox)> RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
+    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)> RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
         var gpxInfo = await RoutesFromGpxFile(gpxFile);
 
-        var featureCollection = new List<Feature>();
+        var featureCollection = new List<FeatureAndBufferedFeature>();
         var boundingBox = new Envelope();
 
         foreach (var loopGpxInfo in gpxInfo)
         {
-            var feature = LineFeatureFromGpxRouteBuffered(loopGpxInfo, bufferInFeet);
-            boundingBox.ExpandToInclude(feature.BoundingBox);
-            featureCollection.Add(feature);
+            var feature = LineFeatureFromGpxRoute(loopGpxInfo);
+            var bufferedFeature = LineFeatureFromGpxRouteBuffered(loopGpxInfo, bufferInFeet);
+            boundingBox.ExpandToInclude(bufferedFeature.BoundingBox);
+            featureCollection.Add(new FeatureAndBufferedFeature(feature, bufferedFeature));
         }
 
         return (featureCollection, boundingBox);
@@ -326,18 +327,25 @@ public static class GpxTools
         return (featureCollection, boundingBox);
     }
 
-    public static async Task<(List<Feature> features, Envelope boundingBox)> TrackLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
+    public record FeatureAndBufferedFeature(Feature Feature, Feature BufferedFeature)
+    {
+        public Feature Feature { get; set; } = Feature;
+        public Feature BufferedFeature { get; set; } = BufferedFeature;
+    }
+
+    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)> TrackLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
         var gpxInfo = await TracksFromGpxFile(gpxFile);
 
-        var featureCollection = new List<Feature>();
+        var featureCollection = new List<FeatureAndBufferedFeature>();
         var boundingBox = new Envelope();
 
         foreach (var loopGpxInfo in gpxInfo)
         {
-            var feature = LineFeatureFromGpxTrackBuffered(loopGpxInfo, bufferInFeet);
+            var feature = LineFeatureFromGpxTrack(loopGpxInfo);
+            var bufferedFeature = LineFeatureFromGpxTrackBuffered(loopGpxInfo, bufferInFeet);
             boundingBox.ExpandToInclude(feature.BoundingBox);
-            featureCollection.Add(feature);
+            featureCollection.Add(new FeatureAndBufferedFeature(feature, bufferedFeature));
         }
 
         return (featureCollection, boundingBox);
