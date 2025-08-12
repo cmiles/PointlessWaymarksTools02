@@ -23,14 +23,14 @@
 
   <ItemGroup>
     <PackageReference Include="AnyClone" Version="1.1.6" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.6.2" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.6.4" />
     <PackageReference Include="CliWrap" Version="3.9.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1" />
     <PackageReference Include="Flurl.Http" Version="4.0.2" />
     <PackageReference Include="Markdig" Version="0.41.3" />
-    <PackageReference Include="Metalama.Framework" Version="2025.1.11" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.7" />
+    <PackageReference Include="Metalama.Framework" Version="2025.1.12" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.8" />
     <PackageReference Include="ObjectDumper.NET" Version="4.3.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
@@ -49,9 +49,9 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="SimMetricsCore" Version="2.1.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
-    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.6" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.7" />
     <PackageReference Include="TinyIpc" Version="5.1.0" />
-    <PackageReference Include="UTF.Unknown" Version="2.5.1" />
+    <PackageReference Include="UTF.Unknown" Version="2.6.0" />
   </ItemGroup>
 
 </Project>
