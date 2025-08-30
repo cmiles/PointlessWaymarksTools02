@@ -13,7 +13,7 @@ public static class LineTools
 
         var featureCollection = GeoJsonTools.DeserializeStringToFeatureCollection(geoJson);
 
-        if (featureCollection.Count < 1) return [];
+        if (featureCollection == null || featureCollection.Count < 1) return [];
 
         var possibleLine = featureCollection.FirstOrDefault(x => x.Geometry is LineString);
 

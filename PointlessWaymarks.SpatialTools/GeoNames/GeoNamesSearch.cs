@@ -24,7 +24,7 @@ public static class GeoNamesSearch
     {
         var rawResults = await Search(search, userName);
 
-        if (!rawResults.geonames.Any()) return [];
+        if (rawResults.geonames == null || !rawResults.geonames.Any()) return [];
 
         var orderedResultsList = rawResults.geonames
             .OrderByDescending(x => x.name.GetSimilarities(search.AsList(), SimMetricType.JaroWinkler).First().Score)

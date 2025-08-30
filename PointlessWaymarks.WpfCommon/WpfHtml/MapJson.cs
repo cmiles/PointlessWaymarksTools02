@@ -50,7 +50,7 @@ public static class MapJson
     public static async Task<string> NewMapFeatureCollectionDtoSerialized(
         string featureCollection)
     {
-        var contentFeatureCollection = GeoJsonTools.DeserializeStringToFeatureCollection(featureCollection);
+        var contentFeatureCollection = GeoJsonTools.DeserializeStringToFeatureCollection(featureCollection)!;
 
         var envelope = GeoJsonTools.GeometryBoundingBox(GeoJsonTools.GeoJsonToGeometries(featureCollection));
 

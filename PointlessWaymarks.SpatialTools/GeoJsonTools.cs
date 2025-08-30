@@ -27,7 +27,7 @@ public static class GeoJsonTools
         return toReturn;
     }
 
-    public static FeatureCollection DeserializeFileToFeatureCollection(string fileName)
+    public static FeatureCollection? DeserializeFileToFeatureCollection(string fileName)
     {
         var serializer = GeoJsonSerializer.Create(new JsonSerializerSettings { Formatting = Formatting.Indented },
             Wgs84GeometryFactory(), 3);
@@ -39,7 +39,7 @@ public static class GeoJsonTools
         return serializer.Deserialize<FeatureCollection>(intersectJsonReader);
     }
 
-    public static FeatureCollection DeserializeStringToFeatureCollection(string geoJsonString)
+    public static FeatureCollection? DeserializeStringToFeatureCollection(string geoJsonString)
     {
         if (string.IsNullOrEmpty(geoJsonString)) return [];
 
@@ -95,7 +95,7 @@ public static class GeoJsonTools
 
     public static List<Geometry> GeoJsonToGeometries(string geoJson)
     {
-        var featureCollection = DeserializeStringToFeatureCollection(geoJson);
+        var featureCollection = DeserializeStringToFeatureCollection(geoJson)!;
 
         return featureCollection.Select(x => Wgs84GeometryFactory().CreateGeometry(x.Geometry))
             .ToList();
@@ -129,7 +129,7 @@ public static class GeoJsonTools
     {
         if (string.IsNullOrWhiteSpace(lineString)) return [];
 
-        var featureCollection = DeserializeStringToFeatureCollection(lineString);
+        var featureCollection = DeserializeStringToFeatureCollection(lineString)!;
 
         return featureCollection.Select(x => Wgs84GeometryFactory().CreateGeometry(x.Geometry))
             .ToList();

@@ -41,17 +41,26 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
 
     private readonly SemaphoreSlim _loadGuard = new(1, 1);
 
-
-    private string _lastToWebNavigationUrl = "";
-
     // Example Usage in Xaml
     // <b:Interaction.Behaviors>
     //      <wpfHtml:WebViewHtmlStringAndJsonMessagingBehavior WebViewJsonMessenger="{Binding .}" HtmlString="{Binding MapHtml}" />
     // </b:Interaction.Behaviors>
 
-    private DirectoryInfo _targetDirectory;
+    private readonly DirectoryInfo _targetDirectory;
+
+
+    private string _lastToWebNavigationUrl = "";
     private string _virtualDomain = "localweb.pointlesswaymarks.com";
     private bool _webViewHasLoaded;
+
+    public WebViewGeneratedVirtualDomainBehavior()
+    {
+        var htmlTempDirectory = FileLocationTools.TempStorageWebViewVirtualDomainDirectory();
+        if (!File.Exists(Path.Combine(htmlTempDirectory.FullName, "favicon.ico")))
+            File.WriteAllText(Path.Combine(htmlTempDirectory.FullName, "favicon.ico"), HtmlTools.FavIconIco());
+        _targetDirectory = UniqueFileTools
+            .UniqueRandomLetterNameDirectory(htmlTempDirectory.FullName, 4);
+    }
 
     public Action<Uri, string>? DeferNavigationTo
     {
@@ -83,13 +92,6 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
 
     protected override void OnAttached()
     {
-        var htmlTempDirectory = FileLocationTools.TempStorageWebViewVirtualDomainDirectory();
-        if (!File.Exists(Path.Combine(htmlTempDirectory.FullName, "favicon.ico")))
-            File.WriteAllText(Path.Combine(htmlTempDirectory.FullName, "favicon.ico"), HtmlTools.FavIconIco());
-
-        _targetDirectory = UniqueFileTools
-            .UniqueRandomLetterNameDirectory(htmlTempDirectory.FullName, 4);
-
         _virtualDomain = $"localweb.pointlesswaymarks.com/{_targetDirectory.Name}";
 
         AssociatedObject.Loaded += OnLoaded;
@@ -99,22 +101,53 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
     private async void OnCoreWebView2InitializationCompleted(object? sender,
         CoreWebView2InitializationCompletedEventArgs e)
     {
-        await ThreadSwitcher.ResumeForegroundAsync();
+        try
+        {
+            // Exit early if initialization failed
+            if (!e.IsSuccess)
+            {
+                Log.Error("CoreWebView2 initialization failed: {Error}",
+                    e.InitializationException?.Message ?? "Unknown error");
+                return;
+            }
 
-        AssociatedObject.CoreWebView2.SetVirtualHostNameToFolderMapping(
-            $"localweb.pointlesswaymarks.com",
-            _targetDirectory.Parent.FullName
-            , CoreWebView2HostResourceAccessKind.Allow);
+            await ThreadSwitcher.ResumeForegroundAsync();
 
-        AssociatedObject.CoreWebView2.GetDevToolsProtocolEventReceiver("Log.entryAdded")
-            .DevToolsProtocolEventReceived += DevToolsProtocolEventHandler;
-        await AssociatedObject.CoreWebView2.CallDevToolsProtocolMethodAsync("Log.enable", "{}");
+            AssociatedObject.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "localweb.pointlesswaymarks.com",
+                _targetDirectory.Parent!.FullName
+                , CoreWebView2HostResourceAccessKind.Allow);
 
-        AssociatedObject.NavigationStarting += WebView_OnNavigationStarting;
-        AssociatedObject.CoreWebView2.WebMessageReceived += OnCoreWebView2OnWebMessageReceived;
-        AssociatedObject.CoreWebView2.WebResourceRequested += CoreWebView2OnWebResourceRequested;
+            AssociatedObject.CoreWebView2.GetDevToolsProtocolEventReceiver("Log.entryAdded")
+                .DevToolsProtocolEventReceived += DevToolsProtocolEventHandler;
+            await AssociatedObject.CoreWebView2.CallDevToolsProtocolMethodAsync("Log.enable", "{}");
 
-        WebViewMessenger?.ToWebView.Suspend(false);
+            AssociatedObject.NavigationStarting += WebView_OnNavigationStarting;
+            AssociatedObject.CoreWebView2.WebMessageReceived += OnCoreWebView2OnWebMessageReceived;
+            AssociatedObject.CoreWebView2.WebResourceRequested += CoreWebView2OnWebResourceRequested;
+
+            WebViewMessenger?.ToWebView.Suspend(false);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't rethrow - this prevents the application from crashing
+            Log.Error(ex, "Error in CoreWebView2 initialization: {Message}", ex.Message);
+            Debug.WriteLine($"CoreWebView2 initialization error: {ex}");
+
+            // Try to inform the user if possible
+            try
+            {
+                await ThreadSwitcher.ResumeForegroundAsync();
+                MessageBox.Show(
+                    $"Error initializing WebView2: {ex.Message}\n\nPlease check your WebView2 installation.",
+                    "WebView2 Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch
+            {
+                // Last resort - just log that we couldn't even show the error
+                Log.Error("Could not show WebView2 initialization error message to user");
+            }
+        }
     }
 
     /// <summary>
@@ -124,65 +157,111 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
     /// <param name="args"></param>
     private async void OnCoreWebView2OnWebMessageReceived(object? o, CoreWebView2WebMessageReceivedEventArgs args)
     {
-        await ThreadSwitcher.ResumeForegroundAsync();
-
-        if (args.WebMessageAsJson.Contains("scriptFinished"))
+        try
         {
-            Debug.WriteLine("scriptFinished Received");
-            WebViewMessenger.ToWebView.Suspend(false);
-            return;
-        }
+            await ThreadSwitcher.ResumeForegroundAsync();
 
-        WebViewMessenger.FromWebView.Enqueue(new FromWebViewMessage(args.WebMessageAsJson));
+            if (args.WebMessageAsJson.Contains("scriptFinished"))
+            {
+                Debug.WriteLine("scriptFinished Received");
+                WebViewMessenger?.ToWebView.Suspend(false);
+                return;
+            }
+
+            WebViewMessenger?.FromWebView.Enqueue(new FromWebViewMessage(args.WebMessageAsJson));
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't rethrow - this prevents the application from crashing
+            Log.Error(ex, "Error processing WebView message: {Message}", ex.Message);
+            Debug.WriteLine($"WebView message processing error: {ex}");
+        }
     }
 
     /// <summary>
-    ///     Setup the web environment.
+    ///     Set up the web environment.
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        await _loadGuard.WaitAsync();
+        try
+        {
+            await _loadGuard.WaitAsync();
 
-        if (!_webViewHasLoaded)
-            try
-            {
-                await ThreadSwitcher.ResumeForegroundAsync();
+            if (!_webViewHasLoaded)
+                try
+                {
+                    await ThreadSwitcher.ResumeForegroundAsync();
 
-                await AssociatedObject.EnsureCoreWebView2Async();
+                    await AssociatedObject.EnsureCoreWebView2Async();
 
-                _webViewHasLoaded = true;
-            }
-            catch (Exception exception)
-            {
-                Console.WriteLine(exception);
-                Log.Error(exception, "Error in the OnLoaded method with the WebView2.");
-            }
-            finally
-            {
-                _loadGuard.Release();
-            }
+                    _webViewHasLoaded = true;
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception);
+                    Log.Error(exception, "Error in the OnLoaded method with the WebView2.");
+                }
+                finally
+                {
+                    _loadGuard.Release();
+                }
+        }
+        catch (Exception ex)
+        {
+            // This catch block handles exceptions that might occur with the semaphore or before entering the inner try block
+            Log.Error(ex, "Unhandled error in WebView OnLoaded method: {Message}", ex.Message);
+            Debug.WriteLine($"WebView OnLoaded error: {ex}");
+
+            // Ensure semaphore is released even if an exception occurs before the inner try block
+            if (_loadGuard.CurrentCount == 0)
+                try
+                {
+                    _loadGuard.Release();
+                }
+                catch (SemaphoreFullException)
+                {
+                    // This would happen if the semaphore was somehow already released
+                    Log.Warning("Attempted to release semaphore that was already at max count");
+                }
+        }
     }
 
     private static async void OnWebViewManagerChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is WebViewGeneratedVirtualDomainBehavior bindingBehavior &&
-            e.NewValue is IWebViewMessenger newMessenger)
+        try
         {
-            await ThreadSwitcher.ResumeForegroundAsync();
+            if (d is WebViewGeneratedVirtualDomainBehavior bindingBehavior &&
+                e.NewValue is IWebViewMessenger newMessenger)
+            {
+                await ThreadSwitcher.ResumeForegroundAsync();
 
-            bindingBehavior.WebViewMessenger = newMessenger;
+                bindingBehavior.WebViewMessenger = newMessenger;
 
-            bindingBehavior.WebViewMessenger.ToWebView.Suspend(!bindingBehavior._webViewHasLoaded);
+                bindingBehavior.WebViewMessenger.ToWebView.Suspend(!bindingBehavior._webViewHasLoaded);
 
-            newMessenger.ToWebView.Processor = bindingBehavior.ToWebViewMessageProcessor;
+                newMessenger.ToWebView.Processor = bindingBehavior.ToWebViewMessageProcessor;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't rethrow - this prevents the application from crashing
+            Log.Error(ex, "Error in WebView manager change handler: {Message}", ex.Message);
+            Debug.WriteLine($"WebView manager change error: {ex}");
         }
     }
 
     private async Task ProcessToWebJavaScriptExecute(ExecuteJavaScript javaScriptRequest)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
+
+        if (WebViewMessenger is null)
+        {
+            Debug.WriteLine(
+                $"{nameof(ProcessToWebJavaScriptExecute)}  - WebViewMessenger IS NULL, Nothing will be processed!! - Tag {javaScriptRequest.RequestTag} - javascript Starts: {javaScriptRequest.JavaScriptToExecute[..Math.Min(javaScriptRequest.JavaScriptToExecute.Length, 512)]}");
+            return;
+        }
 
         Debug.WriteLine(
             $"{nameof(ProcessToWebJavaScriptExecute)}  - Suspended: {WebViewMessenger.ToWebView.Suspended} - Tag {javaScriptRequest.RequestTag} - javascript Starts: {javaScriptRequest.JavaScriptToExecute[..Math.Min(javaScriptRequest.JavaScriptToExecute.Length, 512)]}");
@@ -209,6 +288,13 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
     private async Task ProcessToWebViewFileBuilder(FileBuilder fileBuilder)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
+
+        if (WebViewMessenger is null)
+        {
+            Debug.WriteLine(
+                $"{nameof(ProcessToWebViewFileBuilder)}  - WebViewMessenger IS NULL, Nothing will be processed!! -- Tag {fileBuilder.RequestTag} - Create {fileBuilder.Create.Count}, Copy {fileBuilder.Copy.Count}");
+            return;
+        }
 
         Debug.WriteLine(
             $"{nameof(ProcessToWebViewFileBuilder)} - Tag {fileBuilder.RequestTag} - Create {fileBuilder.Create.Count}, Copy {fileBuilder.Copy.Count} - Suspended: {WebViewMessenger.ToWebView.Suspended}");
@@ -296,6 +382,13 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
     {
         await ThreadSwitcher.ResumeForegroundAsync();
 
+        if (WebViewMessenger is null)
+        {
+            Debug.WriteLine(
+                $"{nameof(ProcessToWebViewJson)}  - WebViewMessenger IS NULL, Nothing will be processed!! - Tag {jsonData.RequestTag} - Json Starts: {jsonData.Json[..Math.Min(jsonData.Json.Length, 100)]}");
+            return;
+        }
+
         Debug.WriteLine(
             $"{nameof(ProcessToWebViewJson)} - Suspended: {WebViewMessenger.ToWebView.Suspended} - Tag {jsonData.RequestTag} - Json Starts: {jsonData.Json[..Math.Min(jsonData.Json.Length, 100)]}");
 
@@ -310,6 +403,13 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
     private async Task ProcessToWebViewNavigation(NavigateTo navigateTo)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
+
+        if (WebViewMessenger is null)
+        {
+            Debug.WriteLine(
+                $"{nameof(ProcessToWebViewNavigation)}  - WebViewMessenger IS NULL, Nothing will be processed!! - Tag {navigateTo.RequestTag} - To: {navigateTo.Url} - WaitForScriptFinished: {navigateTo.WaitForScriptFinished}");
+            return;
+        }
 
         Debug.WriteLine(
             $"{nameof(ProcessToWebViewNavigation)} - Suspended: {WebViewMessenger.ToWebView.Suspended} - Tag {navigateTo.RequestTag} - To: {navigateTo.Url} - WaitForScriptFinished: {navigateTo.WaitForScriptFinished}");
@@ -327,7 +427,7 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
 
     private async Task ToWebViewMessageProcessor(ToWebViewRequest arg)
     {
-        await ThreadSwitcher.ResumeBackgroundAsync();
+        await ThreadSwitcher.ResumeForegroundAsync();
 
         await arg.Match(
             ProcessToWebViewFileBuilder,
@@ -339,29 +439,49 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
 
     private async void WebView_OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        await ThreadSwitcher.ResumeForegroundAsync();
-
-        if (e.NavigationKind is CoreWebView2NavigationKind.BackOrForward)
+        try
         {
-            e.Cancel = true;
-            return;
+            await ThreadSwitcher.ResumeForegroundAsync();
+
+            if (e.NavigationKind is CoreWebView2NavigationKind.BackOrForward)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            if (_lastToWebNavigationUrl == e.Uri) return;
+
+            var navigationUri = new Uri(e.Uri);
+
+            if (DeferNavigationTo != null && e.IsUserInitiated)
+            {
+                e.Cancel = true;
+                DeferNavigationTo(navigationUri, _virtualDomain);
+                return;
+            }
+
+            if (RedirectExternalLinksToBrowser && !navigationUri.Host.StartsWith(_virtualDomain))
+            {
+                e.Cancel = true;
+                ProcessHelpers.OpenUrlInExternalBrowser(e.Uri);
+            }
         }
-
-        if (_lastToWebNavigationUrl == e.Uri) return;
-
-        var navigationUri = new Uri(e.Uri);
-
-        if (DeferNavigationTo != null && e.IsUserInitiated)
+        catch (Exception ex)
         {
-            e.Cancel = true;
-            DeferNavigationTo(navigationUri, _virtualDomain);
-            return;
-        }
+            // Log the error but don't rethrow - this prevents the application from crashing
+            Log.Error(ex, "Error handling WebView navigation: {Message}", ex.Message);
+            Debug.WriteLine($"WebView navigation error: {ex}");
 
-        if (RedirectExternalLinksToBrowser && !navigationUri.Host.StartsWith(_virtualDomain))
-        {
-            e.Cancel = true;
-            ProcessHelpers.OpenUrlInExternalBrowser(e.Uri);
+            // Try to prevent navigation if we encountered an error (safer default)
+            try
+            {
+                e.Cancel = true;
+            }
+            catch
+            {
+                // Last resort if we can't even cancel
+                Log.Error("Could not cancel navigation after error");
+            }
         }
     }
 }
