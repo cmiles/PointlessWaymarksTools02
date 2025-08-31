@@ -13,7 +13,7 @@ public class EmptyCollectionToCollapsedConverter : IValueConverter
 
         if (dynamicValue is not null && DynamicTypeTools.PropertyExists(dynamicValue, "Count"))
         {
-            return dynamicValue.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            return dynamicValue!.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         return Visibility.Visible;

@@ -29,5 +29,5 @@ public class S3AccountInformation : IS3AccountInformation
     
     public required Func<S3Providers> S3Provider { get; set; }
     public required Func<string> Secret { get; init; }
-    public required Func<string>? ServiceUrl { get; init; }
+    public required Func<string> ServiceUrl { get; init; }
 }

@@ -8,7 +8,7 @@
         <DebugType>embedded</DebugType>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1" />
+        <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     </ItemGroup>
     <ItemGroup>

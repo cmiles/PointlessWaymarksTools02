@@ -87,7 +87,7 @@ public partial class StatusControlContext
         var toRemove = CancellationList.Where(x => x.CancelSource == cancellationSource).ToList();
 
         if (toRemove.Any())
-            ContextDispatcher.InvokeAsync(() =>
+            _ = ContextDispatcher.InvokeAsync(() =>
             {
                 toRemove.ForEach(x => CancellationList.Remove(x));
                 ShowCancellations = CancellationList.Any();
@@ -358,7 +358,7 @@ public partial class StatusControlContext
         catch (Exception e)
         {
             DecrementNonBlockingTasks();
-            ToastError($"Error: {FirstNonSeeInnerMessage(e)}");
+            _ = ToastError($"Error: {FirstNonSeeInnerMessage(e)}");
 
             Log.Error(e, "RunFireAndForgetNonBlockingTask Exception - Status Context Id: {ContextId}",
                 StatusControlContextId);
@@ -374,7 +374,7 @@ public partial class StatusControlContext
         catch (Exception e)
         {
             DecrementNonBlockingTasks();
-            ToastError($"Error: {FirstNonSeeInnerMessage(e)}");
+            _ = ToastError($"Error: {FirstNonSeeInnerMessage(e)}");
 
             Log.Error(e, "RunFireAndForgetNonBlockingTask Exception - Status Context Id: {ContextId}",
                 StatusControlContextId);
