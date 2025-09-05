@@ -134,4 +134,10 @@
         <EmbeddedResource Include="WpfHtmlResources\localMapCommon.js" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Update="S3BucketDestroyer\BucketDestroyerWindow.xaml.cs">
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
 </Project>

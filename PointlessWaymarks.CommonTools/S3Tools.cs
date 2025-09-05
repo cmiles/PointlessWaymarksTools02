@@ -20,19 +20,7 @@ public static class S3Tools
         return $"https://s3.{endpoint.SystemName}.{endpoint.PartitionDnsSuffix}";
     }
 
-    /// <summary>
-    ///     Lists S3 Items including this programs common metadata
-    /// </summary>
-    /// <param name="accountInfo"></param>
-    /// <param name="prefix">
-    ///     Only items whose key starts with this will be included - bucket
-    ///     does not start with // (or /) and if you don't end this value with a / the starting
-    ///     directory will be included in the return list
-    /// </param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="progress"></param>
-    /// <returns></returns>
-    public static async Task<List<S3RemoteFileAndMetadata>> ListS3Items(IS3AccountInformation accountInfo,
+    public static async Task<List<S3Object>> ListS3Items(IS3AccountInformation accountInfo,
         string prefix, IProgress<string> progress, CancellationToken cancellationToken = default)
     {
         Log.ForContext(nameof(prefix), progress).ForContext(nameof(accountInfo.BucketName), accountInfo.BucketName())
@@ -79,6 +67,32 @@ public static class S3Tools
 
             listRequest.ContinuationToken = response.NextContinuationToken;
         } while (response.IsTruncated ?? false);
+
+        return s3Objects.OrderBy(x => x.Key).ToList();
+    }
+
+    /// <summary>
+    ///     Lists S3 Items including this programs common metadata
+    /// </summary>
+    /// <param name="accountInfo"></param>
+    /// <param name="prefix">
+    ///     Only items whose key starts with this will be included - bucket
+    ///     does not start with // (or /) and if you don't end this value with a / the starting
+    ///     directory will be included in the return list
+    /// </param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="progress"></param>
+    /// <returns></returns>
+    public static async Task<List<S3RemoteFileAndMetadata>> ListS3ItemsAndMetadata(IS3AccountInformation accountInfo,
+        string prefix, IProgress<string> progress, CancellationToken cancellationToken = default)
+    {
+        Log.ForContext(nameof(prefix), progress).ForContext(nameof(accountInfo.BucketName), accountInfo.BucketName())
+            .ForContext(nameof(accountInfo.ServiceUrl), accountInfo.ServiceUrl())
+            .Information("S3 Object Listing - Starting");
+
+        var s3Client = accountInfo.S3Client();
+
+        var s3Objects = await ListS3Items(accountInfo, prefix, progress, cancellationToken);
 
         var collectedObjectsAndMetadata = new ConcurrentBag<S3RemoteFileAndMetadata>();
 
