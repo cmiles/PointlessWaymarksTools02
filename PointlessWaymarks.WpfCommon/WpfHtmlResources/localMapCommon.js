@@ -161,10 +161,35 @@ async function initialMapLoadWithUserPointChooser(initialLatitude, initialLongit
 
     map.on('moveend', onMapMoveEnd);
 
-    map.on('dblclick', function (e) {
-        console.log(e);
-        pointContentMarker.setLatLng(e.latlng);
-        window.chrome.webview.postMessage({ messageType: 'userSelectedLatitudeLongitudeChanged', latitude: e.latlng.lat, longitude: e.latlng.lng });
+    let lastClickTime = 0;
+    let clickTimeout = null;
+
+    map.on('click', function (e) {
+        const DOUBLE_CLICK_DELAY = 300; // ms
+        const now = Date.now();
+
+        if (lastClickTime && (now - lastClickTime) < DOUBLE_CLICK_DELAY) {
+            // Double click detected
+            clearTimeout(clickTimeout);
+            lastClickTime = 0;
+
+            // Your double-click action here:
+            console.log('Double click detected');
+            pointContentMarker.setLatLng(e.latlng);
+            window.chrome.webview.postMessage({
+                messageType: 'userSelectedLatitudeLongitudeChanged',
+                latitude: e.latlng.lat,
+                longitude: e.latlng.lng
+            });
+        } else {
+            // First click: set timer in case it's a single click
+            lastClickTime = now;
+            clearTimeout(clickTimeout);
+            clickTimeout = setTimeout(() => {
+                lastClickTime = 0;
+                // Optionally handle single click here if needed
+            }, DOUBLE_CLICK_DELAY);
+        }
     });
 
     pointContentMarker = new L.marker([initialLatitude, initialLongitude], {
