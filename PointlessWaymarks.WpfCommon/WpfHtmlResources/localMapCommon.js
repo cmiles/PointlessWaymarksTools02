@@ -581,7 +581,7 @@ function closeAllPopups() {
 function centerFeatureHandler(e) {
     broadcastProgress('Center Feature Request');
     map.eachLayer(function (l) {
-        if (l.feature?.properties?.displayId === e.data.DisplayId) {
+        if (l.feature?.properties?.displayId === e.data.Identifier) {
             console.log(`l.feature?.geometry?.type ${l.feature?.geometry?.type}`);
 
             if (l.feature?.geometry?.type === 'Point') {
