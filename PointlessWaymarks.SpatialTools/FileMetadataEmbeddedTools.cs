@@ -307,8 +307,8 @@ public static class FileMetadataEmbeddedTools
     }
 
     /// <summary>
-    ///     Returns combined keywords from Iptc and Xmp embedded metadata with a case insensitive de-duplication,
-    ///     if splitOnCommaAndSemiColon is true any single tag that has a , or ; will be split into multiple
+    ///     Returns combined keywords from Iptc and Xmp embedded metadata with a case-insensitive de-duplication,
+    ///     if splitOnCommaAndSemiColon is true any single tag that has a ',' or ';' will be split into multiple
     ///     tags - this is UNSAFE and will cause problems if any tags contain , or ; - however this option can fix
     ///     a very common metadata problem where tags have been written as a single string
     ///     "single,string" rather than an array of string {"single", "string"}.
@@ -334,6 +334,18 @@ public static class FileMetadataEmbeddedTools
 
                     extractedKeywords.Add(subjectArrayItem.Value.Trim());
                 }
+        }
+
+        var exifIfdZeroDirectory = directories.OfType<ExifIfd0Directory>().ToList();
+
+        foreach (var loopIptc in exifIfdZeroDirectory)
+        {
+            var keywordString = loopIptc.GetDescription(ExifDirectoryBase.TagWinKeywords);
+            if (keywordString == null || !keywordString.Any()) continue;
+
+            var splitKeywords = keywordString.Split(";", StringSplitOptions.RemoveEmptyEntries).Where(x => !string.IsNullOrWhiteSpace(x));
+
+            extractedKeywords.AddRange(splitKeywords);
         }
 
         var iptcDirectory = directories.OfType<IptcDirectory>().ToList();
@@ -388,17 +400,17 @@ public static class FileMetadataEmbeddedTools
         var toReturn = new MetadataLocation();
 
         if (gpsDirectory is null || gpsDirectory.IsEmpty) return toReturn;
-        var geoLocation = gpsDirectory.GetGeoLocation();
+        var geoLocationParsed = gpsDirectory.TryGetGeoLocation(out var geoLocation);
 
-        if (geoLocation?.IsZero ?? true)
-        {
-            toReturn.Longitude = null;
-            toReturn.Latitude = null;
-        }
-        else
+        if (geoLocationParsed && !geoLocation.IsZero)
         {
             toReturn.Latitude = geoLocation.Latitude;
             toReturn.Longitude = geoLocation.Longitude;
+        }
+        else
+        {
+            toReturn.Longitude = null;
+            toReturn.Latitude = null;
         }
 
         var hasSeaLevelIndicator =
