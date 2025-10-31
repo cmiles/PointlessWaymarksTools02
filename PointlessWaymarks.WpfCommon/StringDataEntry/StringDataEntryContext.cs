@@ -8,7 +8,7 @@ namespace PointlessWaymarks.WpfCommon.StringDataEntry;
 [NotifyPropertyChanged]
 public partial class StringDataEntryContext : IHasChanges, IHasValidationIssues
 {
-    private StringDataEntryContext()
+    public StringDataEntryContext()
     {
         PropertyChanged += OnPropertyChanged;
     }

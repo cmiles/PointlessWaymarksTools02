@@ -8,7 +8,7 @@ namespace PointlessWaymarks.WpfCommon.BoolDataEntry;
 [NotifyPropertyChanged]
 public partial class BoolDataEntryContext : IHasChanges, IHasValidationIssues
 {
-    private BoolDataEntryContext()
+    public BoolDataEntryContext()
     {
         PropertyChanged += OnPropertyChanged;
     }
