@@ -1,4 +1,4 @@
-﻿namespace PointlessWaymarks.CommonTools;
+namespace PointlessWaymarks.CommonTools;
 
 public static class ListTools
 {
@@ -44,6 +44,23 @@ public static class ListTools
     {
         var result = new List<TResult>();
         foreach (var s in source) result.Add(await asyncSelector(s));
+
+        return result;
+    }
+
+    /// <summary>
+    /// Async Select one at a time over an IAsyncEnumerable (sequential).
+    /// </summary>
+    public static async Task<List<TResult>> SelectInSequenceAsync<TSource, TResult>(
+        this IAsyncEnumerable<TSource> source,
+        Func<TSource, Task<TResult>> asyncSelector,
+        CancellationToken cancellationToken = default)
+    {
+        var result = new List<TResult>();
+        await foreach (var s in source.WithCancellation(cancellationToken))
+        {
+            result.Add(await asyncSelector(s));
+        }
 
         return result;
     }

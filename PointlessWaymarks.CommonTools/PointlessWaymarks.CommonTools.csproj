@@ -23,14 +23,14 @@
 
   <ItemGroup>
     <PackageReference Include="AnyClone" Version="1.1.6" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.7.14" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.11.1" />
     <PackageReference Include="CliWrap" Version="3.9.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Devlooped.CredentialManager" Version="2.6.1.1" />
     <PackageReference Include="Flurl.Http" Version="4.0.2" />
     <PackageReference Include="Markdig" Version="0.43.0" />
     <PackageReference Include="Metalama.Framework" Version="2025.1.16" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
     <PackageReference Include="ObjectDumper.NET" Version="4.3.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
@@ -44,12 +44,11 @@
     <PackageReference Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.DelegatingText" Version="1.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="SimMetricsCore" Version="2.1.0" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.3" />
-    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.9" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.10" />
     <PackageReference Include="TinyIpc" Version="5.1.0" />
     <PackageReference Include="UTF.Unknown" Version="2.6.0" />
   </ItemGroup>

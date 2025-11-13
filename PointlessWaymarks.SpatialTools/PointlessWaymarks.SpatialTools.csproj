@@ -9,7 +9,7 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="GeoTimeZone" Version="6.0.0" />
+    <PackageReference Include="GeoTimeZone" Version="6.1.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="MetadataExtractor" Version="2.9.0" />
     <PackageReference Include="NetTopologySuite" Version="2.6.0" />
