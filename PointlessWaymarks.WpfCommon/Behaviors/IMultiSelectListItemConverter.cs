@@ -1,4 +1,4 @@
-﻿namespace PointlessWaymarks.WpfCommon.Behaviors
+namespace PointlessWaymarks.WpfCommon.Behaviors
 {
     /// <summary>
     /// Converts items in the Master list to Items in the target list, and back again. From https://github.com/itsChris/WpfMvvmDataGridMultiselect
