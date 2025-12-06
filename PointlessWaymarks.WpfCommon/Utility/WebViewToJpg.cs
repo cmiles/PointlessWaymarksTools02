@@ -44,6 +44,33 @@ public static class WebViewToJpg
         return newFilename;
     }
 
+    public static async Task<string?> SaveByteArrayAsJpgToFilename(byte[]? byteArray, string fileName,
+        StatusControlContext statusContext)
+    {
+        if (byteArray is null) return null;
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+
+        var newFilename = fileName;
+
+        if (!(Path.GetExtension(newFilename).Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+              Path.GetExtension(newFilename).Equals(".jpeg", StringComparison.OrdinalIgnoreCase)))
+            newFilename += ".jpg";
+
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        statusContext.Progress($"Writing {byteArray.Length} image bytes");
+
+        // Ensure target directory exists (dialog-less workflow)
+        var dir = Path.GetDirectoryName(newFilename);
+        if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+        await File.WriteAllBytesAsync(newFilename, byteArray);
+
+        await statusContext.ToastSuccess($"Screenshot saved to {newFilename}");
+
+        return newFilename;
+    }
+
     public static async Task<OneOf<Success<byte[]>, Error<string>>> SaveCurrentPageAsJpeg(
         WebView2CompositionControl webContentWebView, IProgress<string>? progress)
     {
