@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -7,6 +8,7 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Iptc;
 using MetadataExtractor.Formats.QuickTime;
+using Directory = MetadataExtractor.Directory;
 
 namespace PointlessWaymarks.WpfCommon.SimpleMediaPlayer;
 
@@ -50,7 +52,10 @@ public partial class SimpleMediaPlayerControl
 
     private void Video_MediaOpened(object? sender, RoutedEventArgs e)
     {
-        var file = VideoContentPlayer.Source.AbsolutePath;
+        var uri = VideoContentPlayer.Source;
+        if (uri == null || !uri.IsAbsoluteUri || uri.Scheme != Uri.UriSchemeFile) return;
+        var file = uri.LocalPath; // unescaped OS path
+        if (!File.Exists(file)) return;
 
         IEnumerable<Directory> directories = ImageMetadataReader.ReadMetadata(file);
 
