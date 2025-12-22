@@ -39,14 +39,14 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         WindowTitle = windowTitle;
     }
 
-
+    public string FfprobeExe { get; set; } = string.Empty;
     public SpatialBounds? MapBounds { get; set; }
     public StatusControlContext StatusContext { get; set; }
     public string WindowTitle { get; set; }
     public WorkQueue<FromWebViewMessage> FromWebView { get; set; }
     public WorkQueue<ToWebViewRequest> ToWebView { get; set; }
 
-    public static async Task<FileMetadataDisplayWindow> CreateInstance(string fileName)
+    public static async Task<FileMetadataDisplayWindow> CreateInstance(string fileName, string? ffProbeExe)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
 
@@ -55,6 +55,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         var metadataWindow = new FileMetadataDisplayWindow(factoryStatusContext, $"Metadata - {fileName}");
 
         metadataWindow.StatusContext.RunBlockingTask(async () => await metadataWindow.LoadData(fileName));
+
+        metadataWindow.FfprobeExe = ffProbeExe ?? string.Empty;
 
         return metadataWindow;
     }
@@ -131,7 +133,7 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             return;
         }
 
-        var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(new FileInfo(fileName));
+        var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(new FileInfo(fileName), FfprobeExe);
         var metadataDirectories = ImageMetadataReader.ReadMetadata(fileName);
         var createdOn = await FileMetadataEmbeddedTools.CreatedOnLocalAndUtc(metadataDirectories);
         var location = await FileMetadataEmbeddedTools.LocationFromExif(metadataDirectories, true,
