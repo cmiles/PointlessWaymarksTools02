@@ -15,7 +15,7 @@
     <PackageReference Include="NetTopologySuite" Version="2.6.0" />
     <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
     <PackageReference Include="NetTopologySuite.IO.GPX" Version="1.1.1" />
-    <PackageReference Include="Unofficial.Garmin.Connect" Version="0.8.1" />
+    <PackageReference Include="Unofficial.Garmin.Connect" Version="0.8.3" />
   </ItemGroup>
 
   <ItemGroup>
