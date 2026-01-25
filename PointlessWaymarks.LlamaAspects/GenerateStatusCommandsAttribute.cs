@@ -1,7 +1,5 @@
-using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.Input;
-using Metalama.Framework.Advising;
 using Metalama.Framework.Aspects;
 using Metalama.Framework.Code;
 
@@ -14,7 +12,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
         foreach (var method in builder.Target.Methods.Where(p =>
                      (p.Attributes.Any(typeof(BlockingCommandAttribute)) ||
                       p.Attributes.Any(typeof(NonBlockingCommandAttribute))) && p.Parameters.Count == 0))
-            builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
+            builder.IntroduceAutomaticProperty($"{method.Name}Command",
                 TypeFactory.GetType(typeof(RelayCommand)).ToNullable(), IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder => propertyBuilder.Accessibility = Accessibility.Public);
@@ -26,7 +24,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
         {
             var firstParameterType = method.Parameters[0].Type;
 
-            builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
+            builder.IntroduceAutomaticProperty($"{method.Name}Command",
                 ((INamedType)TypeFactory.GetType(typeof(RelayCommand<>))).WithTypeArguments(firstParameterType)
                 .ToNullable(),
                 IntroductionScope.Default,
@@ -44,7 +42,7 @@ public class GenerateStatusCommandsAttribute : TypeAspect
         {
             var firstParameterType = method.Parameters[0].Type;
 
-            builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
+            builder.IntroduceAutomaticProperty($"{method.Name}Command",
                 ((INamedType)TypeFactory.GetType(typeof(RelayCommand<>))).WithTypeArguments(firstParameterType)
                 .ToNullable(),
                 IntroductionScope.Default,
@@ -60,12 +58,12 @@ public class GenerateStatusCommandsAttribute : TypeAspect
                      (p.Attributes.Any(typeof(BlockingCommandAttribute)) ||
                       p.Attributes.Any(typeof(NonBlockingCommandAttribute))) && p.Parameters.Count == 1 &&
                      p.Parameters[0].Type.ToType() == typeof(CancellationToken)))
-            builder.Advice.IntroduceAutomaticProperty(method.DeclaringType, $"{method.Name}Command",
+            builder.IntroduceAutomaticProperty($"{method.Name}Command",
                 TypeFactory.GetType(typeof(RelayCommand)).ToNullable(), IntroductionScope.Default,
                 OverrideStrategy.Ignore,
                 propertyBuilder => propertyBuilder.Accessibility = Accessibility.Public);
 
-        builder.Advice.IntroduceMethod(builder.Target, "BuildCommands");
+        builder.IntroduceMethod("BuildCommands");
 
         //if (builder.Target.Constructors.Count < 1)
         //{
@@ -78,13 +76,6 @@ public class GenerateStatusCommandsAttribute : TypeAspect
         //{
         //    builder.With(constructor).Override(nameof(this.OverrideConstructorTemplate));
         //}
-    }
-
-    [Template]
-    private void OverrideConstructorTemplate()
-    {
-        meta.Proceed();
-        meta.InsertStatement("BuildCommands();");
     }
 
     [Template]
@@ -121,6 +112,13 @@ public class GenerateStatusCommandsAttribute : TypeAspect
             if (loopMethods.Parameters[0].Type != TypeFactory.GetType(typeof(CancellationToken)))
                 meta.InsertStatement(
                     $"{loopMethods.Name}Command = StatusContext.RunNonBlockingTaskCommand<{loopMethods.Parameters[0].Type}>({loopMethods.Name});");
+    }
+
+    [Template]
+    private void OverrideConstructorTemplate()
+    {
+        meta.Proceed();
+        meta.InsertStatement("BuildCommands();");
     }
 
     private string SplitCamelCase(string str)
