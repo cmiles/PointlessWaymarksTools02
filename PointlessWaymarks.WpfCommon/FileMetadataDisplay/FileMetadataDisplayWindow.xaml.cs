@@ -8,9 +8,11 @@ using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.SpatialTools;
 using PointlessWaymarks.WpfCommon.Status;
+using PointlessWaymarks.WpfCommon.Utility;
 using PointlessWaymarks.WpfCommon.WebViewVirtualDomain;
 using PointlessWaymarks.WpfCommon.WpfHtml;
 using PointlessWaymarks.WpfCommon.WpfHtmlResources;
+using Serilog;
 
 namespace PointlessWaymarks.WpfCommon.FileMetadataDisplay;
 
@@ -116,6 +118,51 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         return initialWebFilesMessage;
     }
 
+    public static async Task ImageFileMetadataReports(List<FileInfo?> files, string? ffProbeExe,
+        StatusControlContext statusContext)
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        if (files.Count < 1)
+        {
+            await statusContext.ToastError("Nothing Selected?");
+            return;
+        }
+
+        var errorCount = 0;
+
+        await ThreadSwitcher.ResumeForegroundAsync();
+
+        foreach (var loopFile in files)
+            try
+            {
+                if (loopFile is null || !loopFile.Exists)
+                {
+                    Log.ForContext("loopFile", loopFile.SafeObjectDump())
+                        .Error("Invalid File Detected");
+                    errorCount++;
+                    continue;
+                }
+
+                var metadataWindow = await CreateInstance(loopFile.FullName,
+                    ffProbeExe);
+                await metadataWindow.PositionWindowAndShowOnUiThread();
+            }
+            catch (Exception e)
+            {
+                Log.ForContext("loopFile", loopFile.SafeObjectDump())
+                    .Error(e, "Metadata Report Error");
+                errorCount++;
+            }
+
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        if (errorCount > 0)
+            await statusContext.ToastWarning($"Metadata Report Completed with {errorCount} errors.");
+        else
+            await statusContext.ToastSuccess("Metadata Report Completed.");
+    }
+
     public async Task LoadData(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
@@ -198,10 +245,10 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             {
                 var boundsNode = parsedJson["bounds"];
                 if (boundsNode == null) return;
-                
+
                 var northEastNode = boundsNode["_northEast"];
                 var southWestNode = boundsNode["_southWest"];
-                
+
                 if (northEastNode == null || southWestNode == null) return;
 
                 var northEastLat = northEastNode["lat"]?.GetValue<double>();
@@ -210,13 +257,11 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
                 var southWestLng = southWestNode["lng"]?.GetValue<double>();
 
                 if (northEastLat.HasValue && northEastLng.HasValue && southWestLat.HasValue && southWestLng.HasValue)
-                {
                     MapBounds = new SpatialBounds(
                         northEastLat.Value,
-                        northEastLng.Value, 
-                        southWestLat.Value, 
+                        northEastLng.Value,
+                        southWestLat.Value,
                         southWestLng.Value);
-                }
             }
         }
         catch (Exception e)
