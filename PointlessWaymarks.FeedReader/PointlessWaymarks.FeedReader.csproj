@@ -24,6 +24,6 @@
     <PackageReference Include="AngleSharp" Version="1.4.0" />
     <PackageReference Include="AngleSharp.Io" Version="1.0.0" />
     <PackageReference Include="AngleSharp.Js" Version="0.15.0" />
-    <PackageReference Include="Jint" Version="4.5.0" />
+    <PackageReference Include="Jint" Version="4.6.0" />
   </ItemGroup>
 </Project>
