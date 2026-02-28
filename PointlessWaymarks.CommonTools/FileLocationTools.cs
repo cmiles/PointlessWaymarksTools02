@@ -21,6 +21,19 @@ public static class FileLocationTools
         return directory;
     }
 
+    public static DirectoryInfo DefaultExifToolStorageDirectory()
+    {
+        var directory =
+            new DirectoryInfo(Path.Combine(DefaultStorageDirectory().FullName,
+                "ExifTool"));
+
+        if (!directory.Exists) directory.Create();
+
+        directory.Refresh();
+
+        return directory;
+    }
+
     public static DirectoryInfo DefaultErrorReportsDirectory()
     {
         var baseDirectory = DefaultStorageDirectory();
@@ -107,4 +120,5 @@ public static class FileLocationTools
 
         return directory;
     }
+
 }

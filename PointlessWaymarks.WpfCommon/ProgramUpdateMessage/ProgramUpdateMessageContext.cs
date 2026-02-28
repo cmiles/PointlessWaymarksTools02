@@ -21,9 +21,15 @@ public partial class ProgramUpdateMessageContext
     }
 
     public string CurrentVersion { get; set; } = string.Empty;
+    public long DownloadedBytes { get; set; }
+    public bool DownloadIsIndeterminate { get; set; }
+    public string DownloadProgressMessage { get; set; } = string.Empty;
+    public double DownloadProgressPercent { get; set; }
+    public bool IsDownloading { get; set; }
     public string SetupFile { get; set; } = string.Empty;
     public bool ShowMessage { get; set; }
     public StatusControlContext StatusContext { get; set; }
+    public long TotalBytes { get; set; }
     public string UpdateMessage { get; set; } = string.Empty;
     public string UpdateVersion { get; set; } = string.Empty;
 
@@ -93,11 +99,51 @@ public partial class ProgramUpdateMessageContext
         if (SetupFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             var response = await SetupFile.GetAsync();
-            var bytes = await response.GetBytesAsync();
+            var contentLength = response.ResponseMessage.Content.Headers.ContentLength;
             var fileName = GetFileNameFromResponse(response) ?? GetFileNameFromUrl(SetupFile);
             var filePath = Path.Combine(GetUserDownloadDirectory(), fileName);
-            await File.WriteAllBytesAsync(filePath, bytes);
 
+            TotalBytes = contentLength ?? -1;
+            DownloadedBytes = 0;
+            DownloadProgressPercent = 0;
+            DownloadIsIndeterminate = TotalBytes <= 0;
+            DownloadProgressMessage = TotalBytes > 0
+                ? $"Starting download of {fileName} ({FileAndFolderTools.GetBytesReadable(TotalBytes)})..."
+                : $"Starting download of {fileName}...";
+            IsDownloading = true;
+
+            try
+            {
+                using var responseStream = await response.ResponseMessage.Content.ReadAsStreamAsync();
+                await using var fileStream = new FileStream(filePath, FileMode.Create,
+                    FileAccess.Write, FileShare.None, 81_920, true);
+
+                var buffer = new byte[81_920];
+                int bytesRead;
+                while ((bytesRead = await responseStream.ReadAsync(buffer)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    DownloadedBytes += bytesRead;
+
+                    if (TotalBytes > 0)
+                    {
+                        DownloadProgressPercent = (double)DownloadedBytes / TotalBytes * 100;
+                        DownloadProgressMessage =
+                            $"Downloading {FileAndFolderTools.GetBytesReadable(DownloadedBytes)} of {FileAndFolderTools.GetBytesReadable(TotalBytes)} ({DownloadProgressPercent:N0}%)";
+                    }
+                    else
+                    {
+                        DownloadProgressMessage =
+                            $"Downloading {FileAndFolderTools.GetBytesReadable(DownloadedBytes)}...";
+                    }
+                }
+            }
+            finally
+            {
+                IsDownloading = false;
+            }
+
+            DownloadProgressMessage = $"Download complete: {FileAndFolderTools.GetBytesReadable(DownloadedBytes)}";
             localFile = filePath;
 
             Log.Information("Update File {0} saved to {1}", SetupFile, filePath);

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using GongSolutions.Wpf.DragDrop;
 using PointlessWaymarks.CommonTools;
@@ -61,6 +62,32 @@ public static class DragAndDropFilesHelper
                     StringComparer.OrdinalIgnoreCase)).ToList()
             : virtualFileList;
     }
+
+    /// <summary>
+    ///     Returns a list of directory paths only when the drop contains directories exclusively.
+    ///     If any file is present or the format is unsupported, an empty list is returned.
+    /// </summary>
+    /// <param name="dropInfo"></param>
+    /// <returns></returns>
+    public static List<string> DroppedDirectories(IDropInfo dropInfo)
+    {
+        if (dropInfo.Data is not IDataObject systemDataObject) return [];
+
+        if (!systemDataObject.GetDataPresent(DataFormats.FileDrop)) return [];
+
+        if (systemDataObject.GetData(DataFormats.FileDrop) is not string[] dropList || dropList.Length == 0)
+            return [];
+
+        var directories = dropList.Where(Directory.Exists).Select(Path.GetFullPath).ToList();
+
+        // Only return results if every item is a directory and at least one exists.
+        return directories.Count == dropList.Length && directories.Count > 0
+            ? directories
+            : [];
+    }
+
+
+
 
     /// <summary>
     ///     Returns a list of files, including paths, from IDropInfo. A temporary directory is required

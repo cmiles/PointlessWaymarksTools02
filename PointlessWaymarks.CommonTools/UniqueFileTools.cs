@@ -65,7 +65,7 @@ public static class UniqueFileTools
             randomPostfixLimit++;
             randomPostfixCounter++;
 
-            var postFix = SlugTools.RandomLowerCaseString(6);
+            var postFix = SlugTagTools.RandomLowerCaseString(6);
 
             directoryInfo = new DirectoryInfo($"{fullName}-{postFix}");
         }
@@ -109,7 +109,7 @@ public static class UniqueFileTools
             randomPostfixLimit++;
             randomPostfixCounter++;
 
-            var postFix = SlugTools.RandomLowerCaseString(6);
+            var postFix = SlugTagTools.RandomLowerCaseString(6);
 
             file = new FileInfo(Path.Combine(directory.FullName,
                 $"{Path.GetFileNameWithoutExtension(cleanedBaseName)}-{postFix}{Path.GetExtension(cleanedBaseName)}"));
@@ -128,7 +128,7 @@ public static class UniqueFileTools
 
         for (var i = 0; i < 1000; i++)
         {
-            var random = SlugTools.RandomLowerCaseString(nameLength);
+            var random = SlugTagTools.RandomLowerCaseString(nameLength);
             if (!Directory.Exists(Path.Combine(parent.FullName, random)))
             {
                 var toReturn = new DirectoryInfo(Path.Combine(parent.FullName, random));

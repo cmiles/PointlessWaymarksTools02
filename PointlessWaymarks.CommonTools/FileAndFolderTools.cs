@@ -250,7 +250,7 @@ public static class FileAndFolderTools
     {
         if (selectedFile is not { Exists: true }) return Task.FromResult<FileInfo?>(null);
 
-        var cleanedName = SlugTools.CreateSlug(false, suggestedName.TrimNullToEmpty());
+        var cleanedName = SlugTagTools.CreateSlug(false, suggestedName.TrimNullToEmpty());
 
         if (string.IsNullOrWhiteSpace(cleanedName)) return Task.FromResult<FileInfo?>(null);
 
