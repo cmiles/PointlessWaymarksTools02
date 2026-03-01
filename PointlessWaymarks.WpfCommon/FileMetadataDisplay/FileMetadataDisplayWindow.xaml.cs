@@ -13,6 +13,7 @@ using PointlessWaymarks.WpfCommon.WebViewVirtualDomain;
 using PointlessWaymarks.WpfCommon.WpfHtml;
 using PointlessWaymarks.WpfCommon.WpfHtmlResources;
 using Serilog;
+using XmpCore;
 
 namespace PointlessWaymarks.WpfCommon.FileMetadataDisplay;
 
@@ -180,11 +181,49 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             return;
         }
 
-        var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(new FileInfo(fileName), FfprobeExe);
-        var metadataDirectories = ImageMetadataReader.ReadMetadata(fileName);
-        var createdOn = await FileMetadataEmbeddedTools.CreatedOnLocalAndUtc(metadataDirectories);
-        var location = await FileMetadataEmbeddedTools.LocationFromExif(metadataDirectories, true,
-            createdOn.createdOnUtc ?? createdOn.createdOnLocal ?? DateTime.Now, StatusContext.ProgressTracker());
+        var file = new FileInfo(fileName);
+        var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(file, FfprobeExe);
+
+        MetadataLocation location;
+
+        if (file.Extension.Equals(".xmp", StringComparison.OrdinalIgnoreCase))
+        {
+            // For standalone .xmp files, parse with XmpMetaFactory and extract location
+            IXmpMeta xmp;
+            await using (var stream = File.OpenRead(file.FullName))
+            {
+                xmp = XmpMetaFactory.Parse(stream);
+            }
+
+            location = await FileMetadataXmpSidecarTools.LocationFromXmpSidecar(xmp, true,
+                StatusContext.ProgressTracker());
+        }
+        else
+        {
+            // For image/video files, use ImageMetadataReader
+            var metadataDirectories = ImageMetadataReader.ReadMetadata(fileName);
+            var createdOn = await FileMetadataEmbeddedTools.CreatedOnLocalAndUtc(metadataDirectories);
+            location = await FileMetadataEmbeddedTools.LocationFromExif(metadataDirectories, true,
+                createdOn.createdOnUtc ?? createdOn.createdOnLocal ?? DateTime.Now, StatusContext.ProgressTracker());
+
+            // If the main file has no location, check for a sidecar .xmp
+            if (!location.HasValidLocation())
+            {
+                var sidecar = FileMetadataReport.FindXmpSidecar(file);
+                if (sidecar != null)
+                {
+                    IXmpMeta sidecarXmp;
+                    await using (var stream = File.OpenRead(sidecar.FullName))
+                    {
+                        sidecarXmp = XmpMetaFactory.Parse(stream);
+                    }
+
+                    var sidecarLocation = await FileMetadataXmpSidecarTools.LocationFromXmpSidecar(sidecarXmp, true,
+                        StatusContext.ProgressTracker());
+                    if (sidecarLocation.HasValidLocation()) location = sidecarLocation;
+                }
+            }
+        }
 
         if (location.HasValidLocation())
         {

@@ -18,7 +18,8 @@ public static class FileMetadataXmpSidecarTools
 
         var gpsAltitudeRef = sidecarXmpMeta.GetProperty("http://ns.adobe.com/exif/1.0/", "exif:GPSAltitudeRef");
 
-        var altitudeIsAboveSeaLevel = string.IsNullOrWhiteSpace(gpsAltitudeRef?.Value) || gpsAltitudeRef.Value.Equals("0");
+        var altitudeIsAboveSeaLevel =
+            string.IsNullOrWhiteSpace(gpsAltitudeRef?.Value) || gpsAltitudeRef.Value.Equals("0");
 
         var numerator = 0;
         var denominator = 0;
@@ -61,7 +62,7 @@ public static class FileMetadataXmpSidecarTools
     {
         var gps = CreatedOnLocalAndUtcFromXmpSidecarGpsTimeStamp(sidecarXmpMeta);
 
-        if (gps is { createdOnUtc: { }, createdOnLocal: { } }) return gps;
+        if (gps is { createdOnUtc: not null, createdOnLocal: not null }) return gps;
 
         var photoLocation = await LocationFromXmpSidecar(sidecarXmpMeta, false, null);
 
@@ -71,7 +72,7 @@ public static class FileMetadataXmpSidecarTools
             return (TimeTools.LocalTimeFromUtcAndLocation(originalTag.createdOnUtc.Value, photoLocation.Latitude!.Value,
                 photoLocation.Longitude!.Value), originalTag.createdOnUtc);
 
-        if (originalTag is { createdOnUtc: { }, createdOnLocal: { } }) return originalTag;
+        if (originalTag is { createdOnUtc: not null, createdOnLocal: not null }) return originalTag;
 
         var lastChanceUtc = gps.createdOnUtc ?? originalTag.createdOnUtc;
         var lastChanceLocal = gps.createdOnLocal ?? originalTag.createdOnLocal;
@@ -174,7 +175,8 @@ public static class FileMetadataXmpSidecarTools
             Elevation = AltitudeFromXmpSidecar(sidecarXmpMeta)
         };
 
-        if (toReturn.Elevation == null && tryGetElevationIfNotInMetadata && toReturn is { Latitude: { }, Longitude: { } })
+        if (toReturn.Elevation == null && tryGetElevationIfNotInMetadata &&
+            toReturn is { Latitude: not null, Longitude: not null })
             try
             {
                 toReturn.Elevation = await ElevationService.OpenTopoNedElevation(toReturn.Latitude.Value,

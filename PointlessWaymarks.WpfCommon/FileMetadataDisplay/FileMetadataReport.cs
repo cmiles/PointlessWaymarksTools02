@@ -18,20 +18,8 @@ public static class FileMetadataReport
     {
         if (selectedFile.Extension.Equals(".xmp", StringComparison.OrdinalIgnoreCase))
         {
-            IXmpMeta xmp;
-            await using (var stream = File.OpenRead(selectedFile.FullName))
-            {
-                xmp = XmpMetaFactory.Parse(stream);
-            }
-
-            var xmpProperties = xmp.Properties.OrderBy(x => x.Namespace).ThenBy(x => x.Path)
-                .Select(x => new { x.Namespace, x.Path, x.Value })
-                .ToHtmlTable(new { @class = "pure-table pure-table-striped" });
-
-            var htmlXmpString =
-                await xmpProperties.ToHtmlDocumentWithPureCss("Xmp Metadata", "body {margin: 12px;}");
-
-            return htmlXmpString;
+            var xmpHtml = await XmpSidecarToHtml(selectedFile);
+            return await xmpHtml.ToHtmlDocumentWithPureCss("Xmp Metadata", "body {margin: 12px;}");
         }
 
         var photoMetaTags = ImageMetadataReader.ReadMetadata(selectedFile.FullName);
@@ -64,6 +52,16 @@ public static class FileMetadataReport
         {
             htmlStringBuilder.AppendLine("<br><br><h3>XMP - Part 2</h3><br>");
             htmlStringBuilder.AppendLine(xmpMetadata);
+        }
+
+        // Check for a sidecar .xmp file alongside the main file
+        var sidecarFile = FindXmpSidecar(selectedFile);
+        if (sidecarFile != null)
+        {
+            var sidecarHtml = await XmpSidecarToHtml(sidecarFile);
+            htmlStringBuilder.AppendLine(
+                $"<br><br><h3>Sidecar XMP Data — {HttpUtility.HtmlEncode(sidecarFile.Name)}</h3><br>");
+            htmlStringBuilder.AppendLine(sidecarHtml);
         }
 
         // Check if this is a video file and ffprobe is available
@@ -238,5 +236,38 @@ public static class FileMetadataReport
         {
             return (false, $"<p>FFprobe execution failed</p><p>Error: {HttpUtility.HtmlEncode(ex.Message)}</p>");
         }
+    }
+
+    public static FileInfo? FindXmpSidecar(FileInfo file)
+    {
+        if (file.Directory is null) return null;
+
+        // Common sidecar naming: photo.arw.xmp or photo.xmp (same base name)
+        var withExtension = new FileInfo(Path.Combine(file.Directory.FullName, file.Name + ".xmp"));
+        if (withExtension.Exists) return withExtension;
+
+        var withoutExtension = new FileInfo(Path.Combine(file.Directory.FullName,
+            Path.GetFileNameWithoutExtension(file.Name) + ".xmp"));
+        if (withoutExtension.Exists) return withoutExtension;
+
+        return null;
+    }
+
+    public static async Task<string> XmpSidecarToHtml(FileInfo xmpFile)
+    {
+        IXmpMeta xmp;
+        await using (var stream = File.OpenRead(xmpFile.FullName))
+        {
+            xmp = XmpMetaFactory.Parse(stream);
+        }
+
+        var properties = xmp.Properties
+            .OrderBy(x => x.Namespace).ThenBy(x => x.Path)
+            .Select(x => new { x.Namespace, x.Path, x.Value })
+            .ToList();
+
+        if (properties.Count == 0) return "<p>No XMP properties found.</p>";
+
+        return properties.ToHtmlTable(new { @class = "pure-table pure-table-striped" });
     }
 }
