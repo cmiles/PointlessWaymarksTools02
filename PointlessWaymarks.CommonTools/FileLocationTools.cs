@@ -372,7 +372,7 @@ public static class FileLocationTools
         return directory;
     }
 
-    private static void TryDeleteFile(string path)
+    public static void TryDeleteFile(string? path)
     {
         try
         {
