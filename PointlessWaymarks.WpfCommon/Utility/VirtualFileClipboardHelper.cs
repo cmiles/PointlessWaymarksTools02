@@ -31,10 +31,17 @@ public static class VirtualFileClipboardHelper
         //using the com IDataObject interface get the data using the defined FORMATETC
         comDataObject.GetData(ref formatetc, out var medium);
 
-        switch (medium.tymed)
+        try
         {
-            case TYMED.TYMED_ISTREAM: return GetIStream(medium);
-            default: throw new NotSupportedException();
+            switch (medium.tymed)
+            {
+                case TYMED.TYMED_ISTREAM: return GetIStream(medium);
+                default: throw new NotSupportedException();
+            }
+        }
+        finally
+        {
+            ReleaseStgMedium(ref medium);
         }
     }
 
@@ -42,18 +49,24 @@ public static class VirtualFileClipboardHelper
     {
         //marshal the returned pointer to a IStream object
         var iStream = (IStream)Marshal.GetObjectForIUnknown(medium.unionmember);
-        Marshal.Release(medium.unionmember);
 
-        //get the STATSTG of the IStream to determine how many bytes are in it
-        iStream.Stat(out var iStreamStat, 0);
-        var iStreamSize = (int)iStreamStat.cbSize;
+        try
+        {
+            //get the STATSTG of the IStream to determine how many bytes are in it
+            iStream.Stat(out var iStreamStat, 0);
+            var iStreamSize = (int)iStreamStat.cbSize;
 
-        //read the data from the IStream into a managed byte array
-        var iStreamContent = new byte[iStreamSize];
-        iStream.Read(iStreamContent, iStreamContent.Length, IntPtr.Zero);
+            //read the data from the IStream into a managed byte array
+            var iStreamContent = new byte[iStreamSize];
+            iStream.Read(iStreamContent, iStreamContent.Length, IntPtr.Zero);
 
-        //wrapped the managed byte array into a memory stream
-        return new MemoryStream(iStreamContent);
+            //wrap the managed byte array into a memory stream
+            return new MemoryStream(iStreamContent);
+        }
+        finally
+        {
+            Marshal.FinalReleaseComObject(iStream);
+        }
     }
 
     public static IEnumerable<VirtualFileClipboardDescriptor> ReadFileDescriptor(Stream fileDescriptorStream)
@@ -83,4 +96,7 @@ public static class VirtualFileClipboardHelper
             count--;
         }
     }
+
+    [DllImport("ole32.dll")]
+    private static extern void ReleaseStgMedium(ref STGMEDIUM pmedium);
 }
