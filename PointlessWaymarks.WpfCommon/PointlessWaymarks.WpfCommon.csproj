@@ -73,6 +73,7 @@
         <ProjectReference Include="..\PointlessWaymarks.CommonTools\PointlessWaymarks.CommonTools.csproj" />
         <ProjectReference Include="..\PointlessWaymarks.LlamaAspects\PointlessWaymarks.LlamaAspects.csproj" />
         <ProjectReference Include="..\PointlessWaymarks.SpatialTools\PointlessWaymarks.SpatialTools.csproj" />
+        <ProjectReference Include="..\PointlessWaymarks.WindowsTools\PointlessWaymarks.WindowsTools.csproj" />
     </ItemGroup>
 
     <ItemGroup>

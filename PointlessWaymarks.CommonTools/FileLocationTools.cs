@@ -52,6 +52,15 @@ public static class FileLocationTools
         return directory;
     }
 
+    public static FileInfo DefaultFeatureIntersectSettingsFile()
+    {
+        var file =
+            new FileInfo(Path.Combine(DefaultStorageDirectory().FullName,
+                "PwGtgFeatureIntersectTaggerSettings.json"));
+
+        return file;
+    }
+
     public static DirectoryInfo DefaultFfmpegStorageDirectory()
     {
         var directory =

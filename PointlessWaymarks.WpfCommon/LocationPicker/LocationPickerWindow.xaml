@@ -1,0 +1,83 @@
+<Window x:Class="PointlessWaymarks.WpfCommon.LocationPicker.LocationPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:conversionDataEntry="clr-namespace:PointlessWaymarks.WpfCommon.ConversionDataEntry"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:geoSearch="clr-namespace:PointlessWaymarks.WpfCommon.GeoSearch"
+        xmlns:local="clr-namespace:PointlessWaymarks.WpfCommon.LocationPicker"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:status="clr-namespace:PointlessWaymarks.WpfCommon.Status"
+        xmlns:webViewVirtualDomain="clr-namespace:PointlessWaymarks.WpfCommon.WebViewVirtualDomain"
+        xmlns:windowScreenShot="clr-namespace:PointlessWaymarks.WpfCommon.WindowScreenShot"
+        xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="{Binding WindowTitle}"
+        Width="800"
+        Height="800"
+        d:DataContext="{d:DesignInstance local:LocationPickerWindow}"
+        mc:Ignorable="d">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../WpfCommonResourceDictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <GroupBox Margin="4,0,4,4" Header="Location">
+            <WrapPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                <conversionDataEntry:ConversionDataEntryControl Width="120"
+                    DataContext="{Binding LocationPicker.LatitudeEntry}" />
+                <conversionDataEntry:ConversionDataEntryControl Width="120"
+                    DataContext="{Binding LocationPicker.LongitudeEntry}" />
+                <conversionDataEntry:ConversionDataEntryControl Width="120"
+                    DataContext="{Binding LocationPicker.ElevationEntry}" />
+                <Button
+                    Width="90" Height="36"
+                    Margin="2,2,0,1"
+                    VerticalAlignment="Bottom"
+                    Command="{Binding LocationPicker.GetElevationCommand}">
+                    Get Elevation
+                </Button>
+            </WrapPanel>
+        </GroupBox>
+        <wpf:WebView2CompositionControl Grid.Row="1">
+            <b:Interaction.Behaviors>
+                <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior
+                    DeferNavigationTo="{Binding LocationPicker.MapPreviewNavigationManager}"
+                    WebViewMessenger="{Binding LocationPicker}" />
+            </b:Interaction.Behaviors>
+        </wpf:WebView2CompositionControl>
+        <Border Grid.Row="2"
+                Visibility="{Binding LocationPicker.LocationSearchContext.ApiAvailable, Converter={StaticResource BooleanToVisibility}}">
+            <geoSearch:GeoSearchControl DataContext="{Binding LocationPicker.LocationSearchContext}" />
+        </Border>
+        <Border Grid.Row="3">
+            <WrapPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                <Button Margin="4" Padding="8,4"
+                        Command="{Binding LocationPicker.CenterMapOnSelectedLocationCommand}"
+                        Content="Center on Location" />
+                <Button Margin="4" Padding="8,4"
+                        Click="CancelButton_OnClick"
+                        Content="Cancel" />
+                <Button Margin="4" Padding="8,4"
+                        Click="ChooseLocationButton_OnClick"
+                        Content="Choose Location" />
+            </WrapPanel>
+        </Border>
+        <windowScreenShot:WindowScreenShotControl
+            Grid.Row="0" Grid.RowSpan="3"
+            HorizontalContentAlignment="Right"
+            VerticalContentAlignment="Bottom" />
+        <status:StatusControl
+            Grid.Row="0" Grid.RowSpan="3"
+            d:IsHidden="true"
+            DataContext="{Binding StatusContext}" />
+    </Grid>
+</Window>
