@@ -8,6 +8,7 @@ using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.GeoTaggingService;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.SpatialTools;
+using PointlessWaymarks.WpfCommon.AppMessages;
 using PointlessWaymarks.WpfCommon.FeatureIntersectTagger;
 using PointlessWaymarks.WpfCommon.FileList;
 using PointlessWaymarks.WpfCommon.FileMetadataDisplay;
@@ -96,6 +97,8 @@ public partial class FileBasedGeoTaggerContext
         await control.Load();
         return control;
     }
+
+    public event EventHandler<List<string>>? FilesWritten;
 
     [BlockingCommand]
     public async Task GeneratePreview()
@@ -371,6 +374,14 @@ public partial class FileBasedGeoTaggerContext
         }
 
         SelectedTab = 4;
+
+        var writtenFileNames = WriteToFileResults.FileResults
+            .Where(x => x.WroteMetadata)
+            .Select(x => x.FileName)
+            .ToList();
+
+        if (writtenFileNames.Count > 0)
+            FilesWritten?.Invoke(this, writtenFileNames);
     }
 
     public record GeoJsonSiteJsonData(string PageUrl, SpatialBounds Bounds, FeatureCollection GeoJson);

@@ -1,0 +1,24 @@
+<Window
+    x:Class="PointlessWaymarks.WpfCommon.FeatureIntersectTagger.FeatureIntersectTaggerWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:PointlessWaymarks.WpfCommon.FeatureIntersectTagger"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:status="clr-namespace:PointlessWaymarks.WpfCommon.Status"
+    xmlns:windowScreenShot="clr-namespace:PointlessWaymarks.WpfCommon.WindowScreenShot"
+    Title="{Binding WindowTitle}"
+    Width="900"
+    Height="650"
+    d:DataContext="{d:DesignInstance local:FeatureIntersectTaggerWindow}"
+    mc:Ignorable="d">
+    <Grid>
+        <local:FeatureIntersectTaggerControl DataContext="{Binding FeatureIntersectTaggerContent}" />
+        <status:StatusControl DataContext="{Binding StatusContext}" />
+        <windowScreenShot:WindowScreenShotControl
+            Width="40"
+            Margin="2"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom" />
+    </Grid>
+</Window>

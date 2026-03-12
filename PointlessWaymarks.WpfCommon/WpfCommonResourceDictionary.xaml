@@ -17,6 +17,7 @@
     <valueConverters:VisibleWhenAllFalseOtherwiseCollapsedMultiConverter x:Key="VisibleWhenAllFalseOtherwiseCollapsedMulti" />
     <valueConverters:NullOrWhiteSpaceStringToTrueConverter x:Key="NullOrWhiteSpaceStringToTrue" />
     <valueConverters:NullOrWhiteSpaceStringToFalseConverter x:Key="NullOrWhiteSpaceStringToFalse" />
+    <valueConverters:MetersToFeetValueConverter x:Key="MetersToFeet" />
     <Style x:Key="DataEntryLabelStyle" TargetType="Label">
         <Setter Property="FontWeight" Value="DemiBold" />
     </Style>

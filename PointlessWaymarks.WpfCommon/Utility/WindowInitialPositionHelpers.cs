@@ -7,18 +7,19 @@ using Point = System.Drawing.Point;
 namespace PointlessWaymarks.WpfCommon.Utility;
 
 /// <summary>
-/// Methods for 'safely' positioning a window to avoid pitfalls like the window being
-/// off screen. Heavily based on reading code from https://github.com/RickStrahl/MarkdownMonster/,
-/// https://github.com/anakic/Jot, https://github.com/microsoft/WPF-Samples/tree/master/Windows/SaveWindowState
-/// and https://github.com/micdenny/WpfScreenHelper
+///     Methods for 'safely' positioning a window to avoid pitfalls like the window being
+///     off screen. Heavily based on reading code from https://github.com/RickStrahl/MarkdownMonster/,
+///     https://github.com/anakic/Jot, https://github.com/microsoft/WPF-Samples/tree/master/Windows/SaveWindowState
+///     and https://github.com/micdenny/WpfScreenHelper
 /// </summary>
 public static class WindowInitialPositionHelpers
 {
     /// <summary>
-    /// !! Only call this on the UI Thread !! Ensures that a window is visible on a screen (ie the window is not trapped off screen).
-    /// In general for anything other than the initial main window try to use PositionWindowAndShowOnUiThread
-    /// as it will both ensure calls are on the correct thread and will by default
-    /// position windows relative to the first active window in the application.
+    ///     !! Only call this on the UI Thread !! Ensures that a window is visible on a screen (ie the window is not trapped
+    ///     off screen).
+    ///     In general for anything other than the initial main window try to use PositionWindowAndShowOnUiThread
+    ///     as it will both ensure calls are on the correct thread and will by default
+    ///     position windows relative to the first active window in the application.
     /// </summary>
     /// <param name="window"></param>
     /// <param name="parentWindow"></param>
@@ -31,16 +32,13 @@ public static class WindowInitialPositionHelpers
         Rect screenBounds;
 
         parentWindow ??= Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ??
-            Application.Current.Windows.OfType<Window>().FirstOrDefault();
+                         Application.Current.Windows.OfType<Window>().FirstOrDefault();
 
         screenBounds = parentWindow == null
             ? Screen.FromHandle(new WindowInteropHelper(window).Handle).WpfWorkingArea
             : Screen.FromHandle(new WindowInteropHelper(parentWindow).Handle).WpfWorkingArea;
 
-        if (window.Left + window.Width > screenBounds.Right)
-        {
-            window.Left = screenBounds.Right - window.Width;
-        }
+        if (window.Left + window.Width > screenBounds.Right) window.Left = screenBounds.Right - window.Width;
 
         if (window.Left < screenBounds.Left)
         {
@@ -49,10 +47,7 @@ public static class WindowInitialPositionHelpers
                 window.Width = screenBounds.Width - 20;
         }
 
-        if (window.Top + window.Height > screenBounds.Bottom)
-        {
-            window.Top = screenBounds.Bottom - window.Height;
-        }
+        if (window.Top + window.Height > screenBounds.Bottom) window.Top = screenBounds.Bottom - window.Height;
 
         if (window.Top < screenBounds.Top)
         {
@@ -101,7 +96,8 @@ public static class WindowInitialPositionHelpers
     /// <returns></returns>
     public static void PositionWindowAndShow(this Window toPosition)
     {
-        var positionReference = Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ?? Application.Current.Windows.OfType<Window>().FirstOrDefault();
+        var positionReference = Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ??
+                                Application.Current.Windows.OfType<Window>().FirstOrDefault();
 
         if (positionReference != null)
         {
@@ -116,18 +112,22 @@ public static class WindowInitialPositionHelpers
 
     public static bool? PositionWindowAndShowDialog(this Window toPosition)
     {
-        var positionReference = Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ?? Application.Current.Windows.OfType<Window>().FirstOrDefault();
+        var positionReference = Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ??
+                                Application.Current.Windows.OfType<Window>().FirstOrDefault();
 
         if (positionReference != null)
-        {
             toPosition.Owner = positionReference;
-        }
         else
-        {
             EnsureWindowIsVisible(toPosition, positionReference);
-        }
 
         return toPosition.ShowDialog();
+    }
+
+    public static async Task<bool?> PositionWindowAndShowDialogOnUiThread(this Window toPosition)
+    {
+        await ThreadSwitcher.ResumeForegroundAsync();
+
+        return toPosition.PositionWindowAndShowDialog();
     }
 
     /// <summary>
@@ -142,13 +142,6 @@ public static class WindowInitialPositionHelpers
         await ThreadSwitcher.ResumeForegroundAsync();
 
         toPosition.PositionWindowAndShow();
-    }
-    
-    public static async Task<bool?> PositionWindowAndShowDialogOnUiThread(this Window toPosition)
-    {
-        await ThreadSwitcher.ResumeForegroundAsync();
-
-        return toPosition.PositionWindowAndShowDialog();
     }
 
     private enum DpiType
