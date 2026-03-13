@@ -6,6 +6,9 @@ namespace PointlessWaymarks.CommonTools;
 
 public static class FileLocationTools
 {
+    public static readonly string FfmpegExeName = "ffmpeg.exe";
+    public static readonly string FfprobeExeName = "ffprobe.exe";
+
     /// <summary>
     ///     This returns the default Pointless Waymarks storage directory - currently in the users
     ///     My Documents in a Pointless Waymarks Cms Folder - this will return the same value regardless
@@ -74,6 +77,20 @@ public static class FileLocationTools
         return directory;
     }
 
+    public static (bool exists, FileInfo? executable) FfmpegExecutableExists(DirectoryInfo? directory)
+    {
+        if (directory is not { Exists: true }) return (false, null);
+        var file = new FileInfo(Path.Combine(directory.FullName, FfmpegExeName));
+        return file.Exists ? (true, file) : (false, null);
+    }
+
+    public static (bool exists, FileInfo? executable) FfprobeExecutableExists(DirectoryInfo? directory)
+    {
+        if (directory is not { Exists: true }) return (false, null);
+        var file = new FileInfo(Path.Combine(directory.FullName, FfprobeExeName));
+        return file.Exists ? (true, file) : (false, null);
+    }
+
     /// <summary>
     ///     This returns the default Pointless Waymarks storage directory - currently in the users
     ///     My Documents in a Pointless Waymarks Cms Folder - this will return the same value regardless
@@ -112,7 +129,7 @@ public static class FileLocationTools
         return directory;
     }
 
-    public static async Task<(bool Success, string Message, FileInfo? ExifToolExe)> DownloadAndSetupExifTool(
+    public static async Task<(bool Success, string Message, FileInfo? ExifToolExe)> FindDownloadUpdateExifTool(
         string? directory = null,
         IProgress<string>? progress = null)
     {
@@ -136,13 +153,13 @@ public static class FileLocationTools
             remoteVersion = (await http.GetStringAsync(versionUrl).ConfigureAwait(false)).Trim();
         }
 
-        var existingExe = FindExifToolExecutable(targetDir);
+        var (existingFound, existingExe) = ExifToolExecutableExists(targetDir);
         var localVersion = await GetExifToolVersion(existingExe);
 
-        if (existingExe != null && !string.IsNullOrWhiteSpace(localVersion) &&
+        if (existingFound && !string.IsNullOrWhiteSpace(localVersion) &&
             string.Equals(localVersion, remoteVersion, StringComparison.OrdinalIgnoreCase))
         {
-            progress?.Report($"ExifTool {localVersion} already available at {existingExe.FullName}.");
+            progress?.Report($"ExifTool {localVersion} already available at {existingExe!.FullName}.");
             return (true, "ExifTool already up to date.", existingExe);
         }
 
@@ -151,13 +168,13 @@ public static class FileLocationTools
         try
         {
             progress?.Report(
-                existingExe != null
+                existingFound
                     ? $"Updating ExifTool from {localVersion ?? "unknown"} to {remoteVersion}..."
                     : $"Downloading ExifTool {remoteVersion}...");
 
             var exifToolUrl =
                 $"https://oliverbetz.de/cms/files/Artikel/ExifTool-for-Windows/exiftool-{remoteVersion}_64.zip";
-            tempZipPath = Path.Combine(Path.GetTempPath(), $"exiftool-{Guid.NewGuid():N}_64.zip");
+            tempZipPath = Path.Combine(targetDir.FullName, $"exiftool-{Guid.NewGuid():N}_64.zip");
 
             using (var http = new HttpClient())
             {
@@ -167,11 +184,11 @@ public static class FileLocationTools
             progress?.Report("Extracting ExifTool...");
             await Task.Run(() => ZipFile.ExtractToDirectory(tempZipPath, targetDir.FullName, true));
 
-            var extractedExe = FindExifToolExecutable(targetDir);
-            if (extractedExe == null)
+            var (extractedFound, extractedExe) = ExifToolExecutableExists(targetDir);
+            if (!extractedFound)
                 return (false, "Download completed but exiftool executable was not found after extraction.", null);
 
-            if (!extractedExe.Name.Equals("exiftool.exe", StringComparison.OrdinalIgnoreCase))
+            if (!extractedExe!.Name.Equals("exiftool.exe", StringComparison.OrdinalIgnoreCase))
             {
                 var renamedPath = Path.Combine(extractedExe.Directory!.FullName, "exiftool.exe");
                 if (File.Exists(renamedPath)) File.Delete(renamedPath);
@@ -196,11 +213,15 @@ public static class FileLocationTools
         }
     }
 
+    
+
     public static async Task<(bool Success, string Message, FileInfo? FfmpegExe, FileInfo? FfprobeExe)>
-        DownloadAndSetupFfmpeg(
+        FindDownloadUpdateFfmpegAndFfprobe(
             string? directory = null,
             IProgress<string>? progress = null)
     {
+        progress?.Report("Checking ffmpeg configuration...");
+
         if (string.IsNullOrWhiteSpace(directory)) directory = DefaultFfmpegStorageDirectory().FullName;
 
         var targetDirectory = new DirectoryInfo(directory);
@@ -210,8 +231,8 @@ public static class FileLocationTools
             targetDirectory.Refresh();
         }
 
-        var ffmpegZipPath = Path.Combine(targetDirectory.FullName, $"ffmpeg-{Guid.NewGuid():N}.zip");
-        var ffprobeZipPath = Path.Combine(targetDirectory.FullName, $"ffprobe-{Guid.NewGuid():N}.zip");
+        string? tempFfmpegZipPath = null;
+        string? tempFfprobeZipPath = null;
 
         try
         {
@@ -238,29 +259,60 @@ public static class FileLocationTools
             if (string.IsNullOrWhiteSpace(ffmpegUrl) || string.IsNullOrWhiteSpace(ffprobeUrl))
                 return (false, "Could not retrieve ffmpeg download URLs from API response.", null, null);
 
-            var version = apiData.TryGetProperty("version", out var versionElement)
+            var remoteVersion = apiData.TryGetProperty("version", out var versionElement)
                 ? versionElement.GetString() ?? "unknown"
                 : "unknown";
 
-            progress?.Report($"Latest ffmpeg version: {version}");
+            progress?.Report($"Latest ffmpeg version: {remoteVersion}");
 
-            await DownloadFileAsync(httpClient, ffmpegUrl, ffmpegZipPath, "ffmpeg", progress);
-            await DownloadFileAsync(httpClient, ffprobeUrl, ffprobeZipPath, "ffprobe", progress);
+            var (existingFfmpegFound, existingFfmpegExe) = FfmpegExecutableExists(targetDirectory);
+            var (existingFfprobeFound, existingFfprobeExe) = FfprobeExecutableExists(targetDirectory);
+
+            if (existingFfmpegFound && existingFfprobeFound)
+            {
+                var localVersion = await GetFfmpegVersion(existingFfmpegExe);
+
+                if (!string.IsNullOrWhiteSpace(localVersion) &&
+                    string.Equals(localVersion, remoteVersion, StringComparison.OrdinalIgnoreCase))
+                {
+                    progress?.Report(
+                        $"ffmpeg {localVersion} already available at {existingFfmpegExe!.FullName}.");
+                    return (true, "ffmpeg and ffprobe already up to date.", existingFfmpegExe,
+                        existingFfprobeExe);
+                }
+
+                progress?.Report(
+                    $"Updating ffmpeg from {localVersion ?? "unknown"} to {remoteVersion}...");
+            }
+            else
+            {
+                progress?.Report($"Downloading ffmpeg {remoteVersion}...");
+            }
+
+            tempFfmpegZipPath = Path.Combine(targetDirectory.FullName, $"ffmpeg-{Guid.NewGuid():N}.zip");
+            tempFfprobeZipPath = Path.Combine(targetDirectory.FullName, $"ffprobe-{Guid.NewGuid():N}.zip");
+
+            await DownloadFileAsync(httpClient, ffmpegUrl, tempFfmpegZipPath, "ffmpeg", progress);
+            await DownloadFileAsync(httpClient, ffprobeUrl, tempFfprobeZipPath, "ffprobe", progress);
 
             progress?.Report("Extracting ffmpeg archive...");
-            await Task.Run(() => ZipFile.ExtractToDirectory(ffmpegZipPath, targetDirectory.FullName, true));
+            await Task.Run(() => ZipFile.ExtractToDirectory(tempFfmpegZipPath, targetDirectory.FullName, true));
 
             progress?.Report("Extracting ffprobe archive...");
-            await Task.Run(() => ZipFile.ExtractToDirectory(ffprobeZipPath, targetDirectory.FullName, true));
+            await Task.Run(() => ZipFile.ExtractToDirectory(tempFfprobeZipPath, targetDirectory.FullName, true));
 
-            var ffmpegExe = targetDirectory.GetFiles("ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault();
-            var ffprobeExe = targetDirectory.GetFiles("ffprobe.exe", SearchOption.AllDirectories).FirstOrDefault();
+            var (ffmpegFound, ffmpegExe) = FfmpegExecutableExists(targetDirectory);
+            var (ffprobeFound, ffprobeExe) = FfprobeExecutableExists(targetDirectory);
 
-            if (ffmpegExe is null || ffprobeExe is null)
-                return (false, "Download completed but ffmpeg.exe or ffprobe.exe was not found after extraction.",
+            if (!ffmpegFound || !ffprobeFound)
+                return (false,
+                    "Download completed but ffmpeg.exe or ffprobe.exe was not found after extraction.",
                     null, null);
 
-            return (true, $"Successfully downloaded and installed ffmpeg {version}.", ffmpegExe, ffprobeExe);
+            progress?.Report(
+                $"ffmpeg ready at {ffmpegExe!.FullName} (version {remoteVersion}).");
+            return (true, $"Successfully downloaded and installed ffmpeg {remoteVersion}.", ffmpegExe,
+                ffprobeExe);
         }
         catch (HttpRequestException ex)
         {
@@ -272,8 +324,8 @@ public static class FileLocationTools
         }
         finally
         {
-            TryDeleteFile(ffmpegZipPath);
-            TryDeleteFile(ffprobeZipPath);
+            TryDeleteFile(tempFfmpegZipPath);
+            TryDeleteFile(tempFfprobeZipPath);
         }
     }
 
@@ -310,11 +362,12 @@ public static class FileLocationTools
         progress?.Report($"Downloading {label}... Done");
     }
 
-    private static FileInfo? FindExifToolExecutable(DirectoryInfo targetDir)
+    private static (bool exists, FileInfo? executable) ExifToolExecutableExists(DirectoryInfo targetDir)
     {
-        return targetDir.GetFiles("exiftool*.exe", SearchOption.AllDirectories)
+        var file = targetDir.GetFiles("exiftool*.exe", SearchOption.AllDirectories)
             .OrderByDescending(f => f.Name.Equals("exiftool.exe", StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
+        return file is { Exists: true } ? (true, file) : (false, null);
     }
 
     private static async Task<string?> GetExifToolVersion(FileInfo? executable)
@@ -338,6 +391,45 @@ public static class FileLocationTools
             await process.WaitForExitAsync().ConfigureAwait(false);
 
             var version = output.Trim();
+            return string.IsNullOrWhiteSpace(version) ? null : version;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static async Task<string?> GetFfmpegVersion(FileInfo? executable)
+    {
+        if (executable is not { Exists: true }) return null;
+
+        try
+        {
+            var psi = new ProcessStartInfo(executable.FullName, "-version")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null) return null;
+
+            var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync().ConfigureAwait(false);
+
+            // First line is typically "ffmpeg version N.N.N ..." — extract the version token.
+            var firstLine = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
+            if (string.IsNullOrWhiteSpace(firstLine)) return null;
+
+            var parts = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            // Expected: "ffmpeg version 6.1 Copyright ..."
+            var versionIndex = Array.IndexOf(parts, "version");
+            var version = versionIndex >= 0 && versionIndex + 1 < parts.Length
+                ? parts[versionIndex + 1]
+                : null;
+
             return string.IsNullOrWhiteSpace(version) ? null : version;
         }
         catch

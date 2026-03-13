@@ -35,7 +35,6 @@ public partial class FeatureIntersectTaggerContext
         FeatureFileToEdit.EndEdit += EndEdit;
     }
 
-    public bool ExifToolExists { get; set; }
     public FeatureFileEditorContext? FeatureFileToEdit { get; set; }
     public FileListContext? FilesToTagFileList { get; set; }
     public FeatureIntersectTaggerFilesToTagSettings? FilesToTagSettings { get; set; }
@@ -181,41 +180,6 @@ public partial class FeatureIntersectTaggerContext
         PadUsAttributeToAdd = string.Empty;
 
         await FeatureIntersectTaggerSettingTools.WriteSettings(Settings);
-    }
-
-    public async Task CheckThatExifToolExists(bool saveSettings)
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-
-        if (string.IsNullOrWhiteSpace(Settings.ExifToolFullName))
-        {
-            ExifToolExists = false;
-            return;
-        }
-
-        var exists = File.Exists(Settings.ExifToolFullName.Trim());
-
-        if (exists && saveSettings)
-        {
-            await FeatureIntersectTaggerSettingTools.WriteSettings(Settings);
-            WeakReferenceMessenger.Default.Send(new ExifToolSettingsUpdateMessage((this, Settings.ExifToolFullName)));
-        }
-
-        ExifToolExists = exists;
-    }
-
-    [BlockingCommand]
-    public async Task ChooseExifFile()
-    {
-        var newFile = await ExifFilePicker.ChooseExifFile(StatusContext, Settings.ExifToolFullName);
-
-        if (!newFile.validFileFound) return;
-
-        Debug.Assert(Settings != null, nameof(Settings) + " != null");
-
-        if (Settings.ExifToolFullName.Equals(newFile.pickedFileName)) return;
-
-        Settings.ExifToolFullName = newFile.pickedFileName;
     }
 
     [BlockingCommand]
@@ -426,10 +390,6 @@ public partial class FeatureIntersectTaggerContext
             ]);
 
         Debug.Assert(Settings != null, nameof(Settings) + " != null");
-
-        Settings.PropertyChanged += OnSettingsPropertyChanged;
-
-        await CheckThatExifToolExists(false);
     }
 
     [BlockingCommand]
@@ -483,22 +443,6 @@ public partial class FeatureIntersectTaggerContext
         await ThreadSwitcher.ResumeBackgroundAsync();
 
         SelectedTab++;
-    }
-
-    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(e.PropertyName)) return;
-
-        if (e.PropertyName == nameof(Settings))
-            StatusContext.RunNonBlockingTask(async () => await CheckThatExifToolExists(false));
-    }
-
-    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(e.PropertyName)) return;
-
-        if (e.PropertyName == nameof(Settings.ExifToolFullName))
-            StatusContext.RunNonBlockingTask(async () => await CheckThatExifToolExists(true));
     }
 
     [NonBlockingCommand]
@@ -571,11 +515,18 @@ public partial class FeatureIntersectTaggerContext
 
         Debug.Assert(Settings != null, nameof(Settings) + " != null");
 
+        var exifTool = await FileLocationTools.FindDownloadUpdateExifTool(null, StatusContext.ProgressTracker());
+
+        if (!exifTool.Success || exifTool.ExifToolExe is null)
+        {
+            await StatusContext.ShowMessageWithOkButton("ExifTool Failure", exifTool.Message);
+            return;
+        }
+
         WriteToFileResults = await PreviewResults.Where(x => !string.IsNullOrWhiteSpace(x.NewTagsString)).ToList()
             .WriteTagsToFiles(
                 false, Settings.CreateBackups, Settings.CreateBackupsInDefaultStorage,
-                Settings.TagsToLowerCase, Settings.SanitizeTags, Settings.TagSpacesToHyphens,
-                Settings.ExifToolFullName, CancellationToken.None, 1024, StatusContext.ProgressTracker());
+                Settings.TagsToLowerCase, Settings.SanitizeTags, Settings.TagSpacesToHyphens, exifTool.ExifToolExe.FullName, CancellationToken.None, 1024, StatusContext.ProgressTracker());
 
         SelectedTab = 6;
     }

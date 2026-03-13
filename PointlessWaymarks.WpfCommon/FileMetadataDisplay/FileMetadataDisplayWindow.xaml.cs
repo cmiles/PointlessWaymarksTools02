@@ -49,7 +49,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
     public WorkQueue<FromWebViewMessage> FromWebView { get; set; }
     public WorkQueue<ToWebViewRequest> ToWebView { get; set; }
 
-    public static async Task<FileMetadataDisplayWindow> CreateInstance(string fileName, string? ffProbeExe)
+    public static async Task<FileMetadataDisplayWindow> CreateInstance(string fileName, string? ffProbeExe,
+        bool tryDownloadFfprobeIfNotFound = true)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
 
@@ -180,6 +181,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
                 "File Metadata Report");
             return;
         }
+
+
 
         var file = new FileInfo(fileName);
         var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(file, FfprobeExe);
