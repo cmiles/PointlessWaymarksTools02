@@ -50,10 +50,10 @@
         <PackageReference Include="HtmlTableHelper" Version="1.2.4" />
         <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
         <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
-        <PackageReference Include="MathConverter" Version="2.2.1" />
+        <PackageReference Include="MathConverter" Version="3.0.0" />
         <PackageReference Include="MdXaml.Plugins" Version="1.27.0" />
         <PackageReference Include="MetadataExtractor" Version="2.9.0" />
-        <PackageReference Include="Metalama.Framework" Version="2026.0.16" />
+        <PackageReference Include="Metalama.Framework" Version="2026.0.17" />
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3800.47" />
         <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.2901" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
@@ -64,7 +64,7 @@
         <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
         <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
         <PackageReference Include="SkiaSharp" Version="3.119.2" />
-        <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
+        <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
         <PackageReference Include="TypeSupport" Version="1.2.0" />
         <PackageReference Include="ValueInjecter" Version="3.2.0" />
         <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
