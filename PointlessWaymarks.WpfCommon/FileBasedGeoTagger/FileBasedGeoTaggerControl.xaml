@@ -17,15 +17,16 @@
     mc:Ignorable="d">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../WpfCommonResourceDictionary.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="InTabMarginStyle" TargetType="FrameworkElement">
+                <Setter Property="Margin" Value="16,0,4,4" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
-        <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}" ItemContainerStyle="{StaticResource UnderlineOnSelectTabItemStyle}">
+        <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}"
+                    ItemContainerStyle="{StaticResource UnderlineOnSelectTabItemStyle}">
             <TabItem Header="GPX Files">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <GroupBox Header="Gpx Files">
                         <Grid Margin="4">
                             <Grid.RowDefinitions>
@@ -55,7 +56,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Files To Tag">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <GroupBox Header="Files To Tag">
                         <Grid Margin="4">
                             <Grid.RowDefinitions>
@@ -97,8 +98,8 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Settings">
-                <ScrollViewer>
-                    <GroupBox Margin="4" Header="Settings and Start Preview">
+                <ScrollViewer Style="{StaticResource InTabMarginStyle}">
+                    <GroupBox Header="Settings and Start Preview">
                         <Grid>
                             <StackPanel>
                                 <Button
@@ -117,7 +118,8 @@
                                                     <Run>- When Geolocation information is found for a file the original version will be copied into a backup directory.</Run>
                                                 </TextBlock>
                                             </CheckBox>
-                                            <CheckBox Margin="24,12,0,0" IsChecked="{Binding CreateBackupsInDefaultStorage}">
+                                            <CheckBox Margin="24,12,0,0"
+                                                      IsChecked="{Binding CreateBackupsInDefaultStorage}">
                                                 <TextBlock TextWrapping="Wrap">
                                                     <Run FontWeight="Bold">Backup into My Documents</Run>
                                                     <Run>- If this is checked backups will be written into a folder in My Documents - this keeps all backups in one place and doesn't add extra files into existing directories. If un-checked backups will be written to a folder under the file's current folder - this keeps the backups close to the original file.</Run>
@@ -189,105 +191,115 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="Preview">
-                <GroupBox Header="Preview">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Button
-                            Height="40"
-                            Margin="8,8,8,12"
-                            HorizontalAlignment="Stretch"
-                            Command="{Binding WriteResultsToFileCommand, UpdateSourceTrigger=PropertyChanged, FallbackValue='0', TargetNullValue='0'}">
-                            Write Location to Files
-                        </Button>
-                        <DataGrid
-                            Grid.Row="1"
-                            AutoGenerateColumns="false"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="false"
-                            CanUserReorderColumns="true"
-                            CanUserResizeColumns="true"
-                            CanUserResizeRows="false"
-                            CanUserSortColumns="true"
-                            FrozenColumnCount="1"
-                            ItemsSource="{Binding PreviewResults.FileResults}">
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn>
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Image
-                                                Width="{StaticResource SmallIconSize}"
-                                                VerticalAlignment="Center"
-                                                Source="{svgc:SvgImage Source=/Icons/alert-octagon.svg,
+                <Grid Style="{StaticResource InTabMarginStyle}">
+                    <GroupBox Header="Preview">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Button
+                                Height="40"
+                                Margin="8,8,8,12"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding WriteResultsToFileCommand, UpdateSourceTrigger=PropertyChanged, FallbackValue='0', TargetNullValue='0'}">
+                                Write Location to Files
+                            </Button>
+                            <DataGrid
+                                Grid.Row="1"
+                                AutoGenerateColumns="false"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="false"
+                                CanUserReorderColumns="true"
+                                CanUserResizeColumns="true"
+                                CanUserResizeRows="false"
+                                CanUserSortColumns="true"
+                                FrozenColumnCount="1"
+                                ItemsSource="{Binding PreviewResults.FileResults}">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Image
+                                                    Width="{StaticResource SmallIconSize}"
+                                                    VerticalAlignment="Center"
+                                                    Source="{svgc:SvgImage Source=/Icons/alert-octagon.svg,
                                                                        AppName=PointlessWaymarks.WpfCommon}"
-                                                ToolTip="{Binding Notes}"
-                                                Visibility="{Binding ShouldWriteMetadata, Converter={StaticResource BooleanNotToHidden}}" />
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Binding="{Binding FileName}" Header="File Name" />
-                                <DataGridTextColumn Binding="{Binding ShouldWriteMetadata}" Header="Will Write" />
-                                <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
-                                <DataGridTextColumn Binding="{Binding Source}" Header="Source" />
-                                <DataGridTextColumn Binding="{Binding UtcDateTime}" Header="UTC" />
-                                <DataGridTextColumn Binding="{Binding Latitude}" Header="Latitude" />
-                                <DataGridTextColumn Binding="{Binding Longitude}" Header="Longitude" />
-                                <DataGridTextColumn Binding="{Binding Elevation, Converter={StaticResource MetersToFeet}, StringFormat=N0}" Header="Elevation" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                        <wpf:WebView2CompositionControl Grid.Row="2">
-                            <b:Interaction.Behaviors>
-                                <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior WebViewMessenger="{Binding PreviewMap}" />
-                            </b:Interaction.Behaviors>
-                        </wpf:WebView2CompositionControl>
-                    </Grid>
-                </GroupBox>
+                                                    ToolTip="{Binding Notes}"
+                                                    Visibility="{Binding ShouldWriteMetadata, Converter={StaticResource BooleanNotToHidden}}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Binding="{Binding FileName}" Header="File Name" />
+                                    <DataGridTextColumn Binding="{Binding ShouldWriteMetadata}" Header="Will Write" />
+                                    <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
+                                    <DataGridTextColumn Binding="{Binding Source}" Header="Source" />
+                                    <DataGridTextColumn Binding="{Binding UtcDateTime}" Header="UTC" />
+                                    <DataGridTextColumn Binding="{Binding Latitude}" Header="Latitude" />
+                                    <DataGridTextColumn Binding="{Binding Longitude}" Header="Longitude" />
+                                    <DataGridTextColumn
+                                        Binding="{Binding Elevation, Converter={StaticResource MetersToFeet}, StringFormat=N0}"
+                                        Header="Elevation" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <wpf:WebView2CompositionControl Grid.Row="2">
+                                <b:Interaction.Behaviors>
+                                    <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior
+                                        WebViewMessenger="{Binding PreviewMap}" />
+                                </b:Interaction.Behaviors>
+                            </wpf:WebView2CompositionControl>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
             </TabItem>
             <TabItem Header="Result">
-                <GroupBox Header="Results">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <DataGrid
-                            AutoGenerateColumns="false"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="false"
-                            CanUserReorderColumns="true"
-                            CanUserResizeColumns="true"
-                            CanUserResizeRows="false"
-                            CanUserSortColumns="true"
-                            FrozenColumnCount="1"
-                            ItemsSource="{Binding WriteToFileResults.FileResults}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Binding="{Binding FileName}" Header="File Name" />
-                                <DataGridTextColumn Binding="{Binding WroteMetadata}" Header="Written" />
-                                <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
-                                <DataGridTextColumn Binding="{Binding Source}" Header="Source" />
-                                <DataGridTextColumn Binding="{Binding Latitude}" Header="Latitude" />
-                                <DataGridTextColumn Binding="{Binding Longitude}" Header="Longitude" />
-                                <DataGridTextColumn Binding="{Binding Elevation, Converter={StaticResource MetersToFeet}, StringFormat=N0}" Header="Elevation" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                        <StackPanel
-                            Grid.Row="1"
-                            Margin="0,6,0,6"
-                            HorizontalAlignment="Right"
-                            Orientation="Horizontal">
-                            <Button Command="{Binding SendResultFilesToFeatureIntersectTaggerCommand}">Send Files to Feature Intersect Tagger</Button>
-                        </StackPanel>
-                        <wpf:WebView2CompositionControl Grid.Row="2">
-                            <b:Interaction.Behaviors>
-                                <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior WebViewMessenger="{Binding WriteMap}" />
-                            </b:Interaction.Behaviors>
-                        </wpf:WebView2CompositionControl>
-                    </Grid>
-                </GroupBox>
+                <Grid Style="{StaticResource InTabMarginStyle}">
+                    <GroupBox Header="Results">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DataGrid
+                                AutoGenerateColumns="false"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="false"
+                                CanUserReorderColumns="true"
+                                CanUserResizeColumns="true"
+                                CanUserResizeRows="false"
+                                CanUserSortColumns="true"
+                                FrozenColumnCount="1"
+                                ItemsSource="{Binding WriteToFileResults.FileResults}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding FileName}" Header="File Name" />
+                                    <DataGridTextColumn Binding="{Binding WroteMetadata}" Header="Written" />
+                                    <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
+                                    <DataGridTextColumn Binding="{Binding Source}" Header="Source" />
+                                    <DataGridTextColumn Binding="{Binding Latitude}" Header="Latitude" />
+                                    <DataGridTextColumn Binding="{Binding Longitude}" Header="Longitude" />
+                                    <DataGridTextColumn
+                                        Binding="{Binding Elevation, Converter={StaticResource MetersToFeet}, StringFormat=N0}"
+                                        Header="Elevation" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StackPanel
+                                Grid.Row="1"
+                                Margin="0,6,0,6"
+                                HorizontalAlignment="Right"
+                                Orientation="Horizontal">
+                                <Button Command="{Binding SendResultFilesToFeatureIntersectTaggerCommand}">Send Files to Feature Intersect Tagger</Button>
+                            </StackPanel>
+                            <wpf:WebView2CompositionControl Grid.Row="2">
+                                <b:Interaction.Behaviors>
+                                    <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior
+                                        WebViewMessenger="{Binding WriteMap}" />
+                                </b:Interaction.Behaviors>
+                            </wpf:WebView2CompositionControl>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
             </TabItem>
         </TabControl>
     </Grid>

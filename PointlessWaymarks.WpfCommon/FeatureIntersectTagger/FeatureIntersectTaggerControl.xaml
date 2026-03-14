@@ -20,15 +20,19 @@
                 <ResourceDictionary Source="../WpfCommonResourceDictionary.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <utility:BindingProxy x:Key="Proxy" Data="{Binding}" />
+            <Style x:Key="InTabMarginStyle" TargetType="FrameworkElement">
+                <Setter Property="Margin" Value="16,0,4,4" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <FrameworkElement.CommandBindings>
         <CommandBinding Command="{x:Static wpf:Commands.Hyperlink}" Executed="OpenHyperlink" />
     </FrameworkElement.CommandBindings>
     <Grid>
-        <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}" ItemContainerStyle="{StaticResource UnderlineOnSelectTabItemStyle}">
+        <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}"
+                    ItemContainerStyle="{StaticResource UnderlineOnSelectTabItemStyle}">
             <TabItem Header="Files To Tag">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <GroupBox Margin="4" Header="Files To Tag">
                         <Grid Margin="4">
                             <Grid.RowDefinitions>
@@ -70,7 +74,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="PAD-US">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition />
@@ -186,7 +190,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="GeoJson Feature Files">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="3*" />
                         <RowDefinition Height="2*" />
@@ -341,7 +345,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Open Street Map - Overpass API">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <ScrollViewer>
                         <Grid>
                             <Grid.RowDefinitions>
@@ -456,7 +460,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Settings">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <ScrollViewer>
                         <GroupBox Margin="4" Header="Settings and Start Preview">
                             <StackPanel>
@@ -552,7 +556,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Preview">
-                <Grid>
+                <Grid Style="{StaticResource InTabMarginStyle}">
                     <GroupBox Header="Preview">
                         <Grid>
                             <DataGrid
@@ -599,38 +603,40 @@
                 </Grid>
             </TabItem>
             <TabItem Header="File Write Results">
-                <GroupBox Header="Results">
-                    <Grid>
-                        <DataGrid
-                            AutoGenerateColumns="false"
-                            CanUserAddRows="False"
-                            CanUserDeleteRows="false"
-                            CanUserReorderColumns="true"
-                            CanUserResizeColumns="true"
-                            CanUserResizeRows="false"
-                            CanUserSortColumns="true"
-                            FrozenColumnCount="1"
-                            IsReadOnly="true"
-                            ItemsSource="{Binding WriteToFileResults}"
-                            SelectedItem="{Binding WriteToFileSelectedItem}"
-                            SelectionMode="Single">
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Command="{Binding WriteToFileSelectItemToResultBrowserCommand}"
-                                              Header="View Result Details" />
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Binding="{Binding FileToTag.FullName}" Header="File Name" />
-                                <DataGridTextColumn Binding="{Binding Result}" Header="Result" />
-                                <DataGridTextColumn Binding="{Binding NewTagsString}" Header="New Tags" />
-                                <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
-                                <DataGridTextColumn Binding="{Binding FinalTagString}" Header="Final Tags" />
-                                <DataGridTextColumn Binding="{Binding ExistingTagString}" Header="Existing Tags" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </GroupBox>
+                <Grid Style="{StaticResource InTabMarginStyle}">
+                    <GroupBox Header="Results">
+                        <Grid>
+                            <DataGrid
+                                AutoGenerateColumns="false"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="false"
+                                CanUserReorderColumns="true"
+                                CanUserResizeColumns="true"
+                                CanUserResizeRows="false"
+                                CanUserSortColumns="true"
+                                FrozenColumnCount="1"
+                                IsReadOnly="true"
+                                ItemsSource="{Binding WriteToFileResults}"
+                                SelectedItem="{Binding WriteToFileSelectedItem}"
+                                SelectionMode="Single">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Command="{Binding WriteToFileSelectItemToResultBrowserCommand}"
+                                                  Header="View Result Details" />
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding FileToTag.FullName}" Header="File Name" />
+                                    <DataGridTextColumn Binding="{Binding Result}" Header="Result" />
+                                    <DataGridTextColumn Binding="{Binding NewTagsString}" Header="New Tags" />
+                                    <DataGridTextColumn Binding="{Binding Notes}" Header="Notes" />
+                                    <DataGridTextColumn Binding="{Binding FinalTagString}" Header="Final Tags" />
+                                    <DataGridTextColumn Binding="{Binding ExistingTagString}" Header="Existing Tags" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
             </TabItem>
         </TabControl>
     </Grid>
