@@ -5,6 +5,7 @@ using MetadataExtractor;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using PointlessWaymarks.CommonTools;
+using PointlessWaymarks.FeatureIntersectionTags.Models;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.SpatialTools;
 using PointlessWaymarks.WpfCommon.Status;
@@ -83,8 +84,7 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
                               <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
                               <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                               <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
-                              <script src="https://[[VirtualDomain]]/leafletBingLayer.js"></script>
-                              <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
+                                              <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
                                 {{{(string.IsNullOrWhiteSpace(styleBlock) ? string.Empty : """<link rel="stylesheet" href="https://[[VirtualDomain]]/customStyle.css" />""")}}}
                                 {{{(string.IsNullOrWhiteSpace(javascript) ? string.Empty : """<script src="https://[[VirtualDomain]]/customScript.js"></script>""")}}}
                             </head>
@@ -108,8 +108,6 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customStyle.css", styleBlock));
         if (!string.IsNullOrWhiteSpace(javascript))
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customScript.js", javascript));
-        initialWebFilesMessage.Create.Add(new FileBuilderCreate("leafletBingLayer.js",
-            WpfHtmlResourcesHelper.LeafletBingLayerJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
             WpfHtmlResourcesHelper.LocalMapCommonJs()));
         initialWebFilesMessage.Create.AddRange(WpfHtmlResourcesHelper.AwesomeMapSvgMarkers());
@@ -257,8 +255,10 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
 
             ToWebView.Enqueue(NavigateTo.CreateRequest("Index.html", true));
 
+            var calTopoApiKey = (await IntersectSettingTools.ReadSettings(null)).CalTopoApiKey;
+
             ToWebView.Enqueue(ExecuteJavaScript.CreateRequest(
-                $"initialMapLoad({location.Latitude.Value}, {location.Longitude.Value})",
+                $"initialMapLoad({location.Latitude.Value}, {location.Longitude.Value}, '{calTopoApiKey}')",
                 true));
 
             ToWebView.Enqueue(new JsonData

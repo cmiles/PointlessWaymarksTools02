@@ -45,7 +45,7 @@ public partial class LocationPickerWindow
     /// </summary>
     public static async Task<LocationPickerWindow> CreateInstance(double initialLatitude, double initialLongitude,
         double? initialElevation, string windowTitle = "Location Picker",
-        string serializedMapIcons = "", string calTopoApiKey = "", string bingApiKey = "",
+        string serializedMapIcons = "", string calTopoApiKey = "",
         Guid? geoNamesSettingsId = null)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
@@ -60,7 +60,7 @@ public partial class LocationPickerWindow
 
         window.LocationPicker = await LocationPickerContext.CreateInstance(window.StatusContext,
             initialLatitude, initialLongitude, initialElevation,
-            serializedMapIcons, calTopoApiKey, bingApiKey, geoNamesSettingsId);
+            serializedMapIcons, calTopoApiKey, geoNamesSettingsId);
         await window.LocationPicker.LoadData();
 
         await ThreadSwitcher.ResumeForegroundAsync();

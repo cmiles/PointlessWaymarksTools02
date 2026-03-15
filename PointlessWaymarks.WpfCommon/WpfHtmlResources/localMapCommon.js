@@ -87,11 +87,10 @@ function initialDocumentLoad() {
  * @param {number} initialLatitude
  * @param {number} initialLongitude
  * @param {string} calTopoApiKey
- * @param {string} bingApiKey
  * @param {boolean} circleMarkerStyle
  * @param autoClosePopups
  */
-async function initialMapLoad(initialLatitude, initialLongitude, calTopoApiKey, bingApiKey, circleMarkerStyle, autoClosePopups = true) {
+async function initialMapLoad(initialLatitude, initialLongitude, calTopoApiKey, circleMarkerStyle, autoClosePopups = true) {
     broadcastProgress(`Initial Map Load - ${initialLatitude}, ${initialLongitude}`);
 
     newLayerAutoClose = autoClosePopups;
@@ -104,7 +103,7 @@ async function initialMapLoad(initialLatitude, initialLongitude, calTopoApiKey, 
     catch { }
 
 
-    let [baseMaps, baseMapNames] = generateBaseMaps(calTopoApiKey, bingApiKey);
+    let [baseMaps, baseMapNames] = generateBaseMaps(calTopoApiKey);
 
     map = L.map('mainMap', {
         center: { lat: initialLatitude, lng: initialLongitude },
@@ -132,9 +131,8 @@ async function initialMapLoad(initialLatitude, initialLongitude, calTopoApiKey, 
  * @param {number} initialLatitude
  * @param {number} initialLongitude
  * @param {string} calTopoApiKey
- * @param {string} bingApiKey
  */
-async function initialMapLoadWithUserPointChooser(initialLatitude, initialLongitude, calTopoApiKey, bingApiKey) {
+async function initialMapLoadWithUserPointChooser(initialLatitude, initialLongitude, calTopoApiKey) {
     broadcastProgress(`Initial Map with User Point Load - ${initialLatitude}, ${initialLongitude}`);
     newLayerAutoClose = true;
     useCircleMarkerStyle = true;
@@ -145,7 +143,7 @@ async function initialMapLoadWithUserPointChooser(initialLatitude, initialLongit
     }
     catch { }
 
-    let [baseMaps, baseMapNames] = generateBaseMaps(calTopoApiKey, bingApiKey);
+    let [baseMaps, baseMapNames] = generateBaseMaps(calTopoApiKey);
 
     map = L.map('mainMap', {
         center: { lat: initialLatitude, lng: initialLongitude },
@@ -211,9 +209,8 @@ async function initialMapLoadWithUserPointChooser(initialLatitude, initialLongit
 
 /**
  * @param {string} calTopoApiKey
- * @param {string} bingApiKey
  */
-function generateBaseMaps(calTopoApiKey, bingApiKey){
+function generateBaseMaps(calTopoApiKey){
     
     let tileLayers = [];
     let layerNames = {};
@@ -280,26 +277,6 @@ function generateBaseMaps(calTopoApiKey, bingApiKey){
         });
         tileLayers.push(calTopoHistoricTwo);
         layerNames["CalTopo - H2"] = calTopoHistoricTwo;
-    }
-    
-    if(bingApiKey && bingApiKey.trim().length > 0){
-        let bingAerial = L.tileLayer.bing({
-            bingMapsKey: bingApiKey,
-            imagerySet: 'AerialWithLabels',
-            maxZoom: 24
-        });
-        tileLayers.push(bingAerial);
-        layerNames["Bing - Aerial"] = bingAerial;
-        
-
-        let bingRoad = L.tileLayer.bing({
-            bingMapsKey: bingApiKey,
-            imagerySet: 'RoadOnDemand',
-            maxZoom: 24
-        });
-        tileLayers.push(bingRoad);
-        layerNames["Bing - Road"] = bingRoad;
-        
     }
 
     let openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {

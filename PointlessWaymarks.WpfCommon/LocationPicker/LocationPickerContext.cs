@@ -22,7 +22,7 @@ public partial class LocationPickerContext : IHasChanges, ICheckForChangesAndVal
 {
     public LocationPickerContext(StatusControlContext statusContext, string serializedMapIcons,
         GeoSearchContext factoryLocationSearchContext, double initialLatitude, double initialLongitude,
-        double? initialElevation, string calTopoApiKey = "", string bingApiKey = "")
+        double? initialElevation, string calTopoApiKey = "")
     {
         StatusContext = statusContext;
 
@@ -49,7 +49,7 @@ public partial class LocationPickerContext : IHasChanges, ICheckForChangesAndVal
         };
 
         this.SetupCmsLeafletPointChooserMapHtmlAndJs("Map", initialLatitude,
-            initialLongitude, serializedMapIcons, calTopoApiKey, bingApiKey);
+            initialLongitude, serializedMapIcons, calTopoApiKey);
 
         PropertyChanged += OnPropertyChanged;
 
@@ -103,7 +103,7 @@ public partial class LocationPickerContext : IHasChanges, ICheckForChangesAndVal
 
     public static async Task<LocationPickerContext> CreateInstance(StatusControlContext statusContext,
         double initialLatitude, double initialLongitude, double? initialElevation,
-        string serializedMapIcons = "", string calTopoApiKey = "", string bingApiKey = "",
+        string serializedMapIcons = "", string calTopoApiKey = "",
         Guid? geoNamesSettingsId = null)
     {
         await ThreadSwitcher.ResumeBackgroundAsync();
@@ -112,7 +112,7 @@ public partial class LocationPickerContext : IHasChanges, ICheckForChangesAndVal
             await GeoSearchContext.CreateInstance(statusContext, geoNamesSettingsId);
 
         return new LocationPickerContext(statusContext, serializedMapIcons, factoryLocationSearchContext,
-            initialLatitude, initialLongitude, initialElevation, calTopoApiKey, bingApiKey);
+            initialLatitude, initialLongitude, initialElevation, calTopoApiKey);
     }
 
     [BlockingCommand]

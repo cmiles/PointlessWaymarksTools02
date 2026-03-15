@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using PointlessWaymarks.CommonTools;
+using PointlessWaymarks.FeatureIntersectionTags.Models;
 using PointlessWaymarks.WpfCommon.WebViewVirtualDomain;
 using PointlessWaymarks.WpfCommon.WpfHtmlResources;
 
@@ -23,8 +24,7 @@ public static class WpfHtmlDocument
                              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
                              <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
                              <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                             <script src="https://[[VirtualDomain]]/leafletBingLayer.js"></script>
-                             <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.css" />
+                                             <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.css" />
                              <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
                              <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
                                {{(string.IsNullOrWhiteSpace(styleBlock) ? string.Empty : """<link rel="stylesheet" href="https://[[VirtualDomain]]/customStyle.css" />""")}}
@@ -48,8 +48,6 @@ public static class WpfHtmlDocument
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customStyle.css", styleBlock));
         if (!string.IsNullOrWhiteSpace(javascript))
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customScript.js", javascript));
-        initialWebFilesMessage.Create.Add(new FileBuilderCreate("leafletBingLayer.js",
-            WpfHtmlResourcesHelper.LeafletBingLayerJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
             WpfHtmlResourcesHelper.LocalMapCommonJs()));
         initialWebFilesMessage.Create.AddRange(WpfHtmlResourcesHelper.AwesomeMapSvgMarkers());
@@ -76,8 +74,7 @@ public static class WpfHtmlDocument
                              <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
                              <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                              <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
-                             <script src="https://[[VirtualDomain]]/leafletBingLayer.js"></script>
-                             <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
+                                             <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
                                {{(string.IsNullOrWhiteSpace(styleBlock) ? string.Empty : """<link rel="stylesheet" href="https://[[VirtualDomain]]/customStyle.css" />""")}}
                                {{(string.IsNullOrWhiteSpace(javascript) ? string.Empty : """<script src="https://[[VirtualDomain]]/customScript.js"></script>""")}}
                            </head>
@@ -94,8 +91,6 @@ public static class WpfHtmlDocument
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customStyle.css", styleBlock));
         if (!string.IsNullOrWhiteSpace(javascript))
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customScript.js", javascript));
-        initialWebFilesMessage.Create.Add(new FileBuilderCreate("leafletBingLayer.js",
-            WpfHtmlResourcesHelper.LeafletBingLayerJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
             WpfHtmlResourcesHelper.LocalMapCommonJs()));
         initialWebFilesMessage.Create.AddRange(WpfHtmlResourcesHelper.AwesomeMapSvgMarkers());
@@ -109,7 +104,7 @@ public static class WpfHtmlDocument
     public static void SetupCmsLeafletMapHtmlAndJs(this IWebViewMessenger messenger, string title,
         double initialLatitude, double initialLongitude, bool autoCloseMarkers, string serializedMapIcons = "{}",
         string calTopoApiKey = "",
-        string bingApiKey = "", string cssStyleBlock = "", string javascript = "")
+         string cssStyleBlock = "", string javascript = "")
     {
         var initialWebFilesMessage = CmsLeafletMapHtmlAndJs(title, cssStyleBlock, javascript, serializedMapIcons);
 
@@ -117,14 +112,16 @@ public static class WpfHtmlDocument
 
         messenger.ToWebView.Enqueue(NavigateTo.CreateRequest($"Index.html?id={Guid.NewGuid()}", true));
 
+        if(string.IsNullOrWhiteSpace(calTopoApiKey))
+            calTopoApiKey = IntersectSettingTools.ReadSettings(null).Result.CalTopoApiKey;
+
         messenger.ToWebView.Enqueue(ExecuteJavaScript.CreateRequest(
-            $"initialMapLoad({initialLatitude}, {initialLongitude}, '{calTopoApiKey}', '{bingApiKey}', true, {autoCloseMarkers.ToString().ToLower()})",
+            $"initialMapLoad({initialLatitude}, {initialLongitude}, '{calTopoApiKey}', true, {autoCloseMarkers.ToString().ToLower()})",
             true));
     }
 
     public static void SetupCmsLeafletMapWithLineElevationChartHtmlAndJs(this IWebViewMessenger messenger, string title,
         double initialLatitude, double initialLongitude, string serializedMapIcons = "", string calTopoApiKey = "",
-        string bingApiKey = "",
         string cssStyleBlock = "", string javascript = "")
     {
         var initialWebFilesMessage =
@@ -134,14 +131,16 @@ public static class WpfHtmlDocument
 
         messenger.ToWebView.Enqueue(NavigateTo.CreateRequest($"Index.html?id={Guid.NewGuid()}", true));
 
+        if (string.IsNullOrWhiteSpace(calTopoApiKey))
+            calTopoApiKey = IntersectSettingTools.ReadSettings(null).Result.CalTopoApiKey;
+
         messenger.ToWebView.Enqueue(ExecuteJavaScript.CreateRequest(
-            $"initialMapLoad({initialLatitude}, {initialLongitude}, '{calTopoApiKey}', '{bingApiKey}', true, true)",
+            $"initialMapLoad({initialLatitude}, {initialLongitude}, '{calTopoApiKey}', true, true)",
             true));
     }
 
     public static void SetupCmsLeafletPointChooserMapHtmlAndJs(this IWebViewMessenger messenger, string title,
         double initialLatitude, double initialLongitude, string serializedMapIcons = "", string calTopoApiKey = "",
-        string bingApiKey = "",
         string cssStyleBlock = "", string javascript = "")
     {
         var initialWebFilesMessage = CmsLeafletMapHtmlAndJs(title, cssStyleBlock, javascript, serializedMapIcons);
@@ -150,8 +149,11 @@ public static class WpfHtmlDocument
 
         messenger.ToWebView.Enqueue(NavigateTo.CreateRequest($"Index.html?id={Guid.NewGuid()}", true));
 
+        if (string.IsNullOrWhiteSpace(calTopoApiKey))
+            calTopoApiKey = IntersectSettingTools.ReadSettings(null).Result.CalTopoApiKey;
+
         messenger.ToWebView.Enqueue(ExecuteJavaScript.CreateRequest(
-            $"initialMapLoadWithUserPointChooser({initialLatitude}, {initialLongitude}, '{calTopoApiKey}', '{bingApiKey}')",
+            $"initialMapLoadWithUserPointChooser({initialLatitude}, {initialLongitude}, '{calTopoApiKey}')",
             true));
     }
 

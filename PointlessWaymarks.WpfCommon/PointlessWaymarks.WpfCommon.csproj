@@ -135,7 +135,6 @@
         <EmbeddedResource Include="WpfHtmlResources\images\markers-soft@2x.png" />
         <EmbeddedResource Include="WpfHtmlResources\leaflet.awesome-svg-markers.css" />
         <EmbeddedResource Include="WpfHtmlResources\leaflet.awesome-svg-markers.js" />
-        <EmbeddedResource Include="WpfHtmlResources\leafletBingLayer.js" />
         <EmbeddedResource Include="WpfHtmlResources\localMapCommon.js" />
     </ItemGroup>
 

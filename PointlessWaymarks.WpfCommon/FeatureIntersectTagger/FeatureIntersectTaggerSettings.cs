@@ -8,11 +8,14 @@ namespace PointlessWaymarks.WpfCommon.FeatureIntersectTagger;
 public partial class FeatureIntersectTaggerSettings
 {
     public int? BufferPointsAndLinesByFeet { get; set; } = null;
+    public string CalTopoApiKey { get; set; } = string.Empty;
     public bool CreateBackups { get; set; }
     public bool CreateBackupsInDefaultStorage { get; set; }
     public ObservableCollection<FeatureFileContext> FeatureIntersectFiles { get; set; } = [];
     public string FilesToTagLastDirectoryFullName { get; set; } = string.Empty;
+    public bool OsmInTagging { get; set; }
     public string? OsmOverpassUrl { get; set; } = "https://overpass-api.de/api/interpreter";
+    public ObservableCollection<string> OsmTagFilters { get; set; } = [];
     public ObservableCollection<string> PadUsAttributes { get; set; } = [];
     public string PadUsDirectory { get; set; } = string.Empty;
     public bool RateLimitOsmOverpass { get; set; } = true;
@@ -20,8 +23,6 @@ public partial class FeatureIntersectTaggerSettings
     public bool TagSpacesToHyphens { get; set; }
     public bool TagsToLowerCase { get; set; } = true;
     public bool UseOsmOverpass { get; set; }
-    public ObservableCollection<string> OsmTagFilters { get; set; } = [];
-    public bool OsmInTagging { get; set; }
 
     public IntersectSettings ToIntersectSettings()
     {
