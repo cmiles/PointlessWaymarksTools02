@@ -42,6 +42,14 @@
         <None Remove="WpfHtmlResources\images\markers-soft.png" />
         <None Remove="WpfHtmlResources\leaflet.awesome-svg-markers.css" />
         <None Remove="WpfHtmlResources\leaflet.awesome-svg-markers.js" />
+        <None Remove="WpfHtmlResources\leaflet.css" />
+        <None Remove="WpfHtmlResources\leaflet.js" />
+        <None Remove="WpfHtmlResources\chart.umd.min.js" />
+        <None Remove="WpfHtmlResources\images\marker-icon.png" />
+        <None Remove="WpfHtmlResources\images\marker-icon-2x.png" />
+        <None Remove="WpfHtmlResources\images\marker-shadow.png" />
+        <None Remove="WpfHtmlResources\images\layers.png" />
+        <None Remove="WpfHtmlResources\images\layers-2x.png" />
     </ItemGroup>
 
     <ItemGroup>
@@ -135,7 +143,15 @@
         <EmbeddedResource Include="WpfHtmlResources\images\markers-soft@2x.png" />
         <EmbeddedResource Include="WpfHtmlResources\leaflet.awesome-svg-markers.css" />
         <EmbeddedResource Include="WpfHtmlResources\leaflet.awesome-svg-markers.js" />
+        <EmbeddedResource Include="WpfHtmlResources\leaflet.css" />
+        <EmbeddedResource Include="WpfHtmlResources\leaflet.js" />
+        <EmbeddedResource Include="WpfHtmlResources\chart.umd.min.js" />
         <EmbeddedResource Include="WpfHtmlResources\localMapCommon.js" />
+        <EmbeddedResource Include="WpfHtmlResources\images\marker-icon.png" />
+        <EmbeddedResource Include="WpfHtmlResources\images\marker-icon-2x.png" />
+        <EmbeddedResource Include="WpfHtmlResources\images\marker-shadow.png" />
+        <EmbeddedResource Include="WpfHtmlResources\images\layers.png" />
+        <EmbeddedResource Include="WpfHtmlResources\images\layers-2x.png" />
     </ItemGroup>
 
     <ItemGroup>

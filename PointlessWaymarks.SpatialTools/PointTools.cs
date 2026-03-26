@@ -18,7 +18,8 @@ public static class PointTools
     /// <returns>A Polygon representing a circle of the specified diameter around the point</returns>
     public static Polygon CreateCircle(Point point, double radiusInFeet)
     {
-        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees( radiusInFeet.FeetToMeters(), point.X, point.Y);
+        var latitudeDegrees =
+            DistanceTools.ApproximateMetersToLatitudeDegrees(radiusInFeet.FeetToMeters(), point.X, point.Y);
         var longitudeDegrees
             = DistanceTools.ApproximateMetersToLongitudeDegrees(radiusInFeet.FeetToMeters(), point.X, point.Y);
 

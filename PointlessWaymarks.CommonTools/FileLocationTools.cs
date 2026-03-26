@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace PointlessWaymarks.CommonTools;
 
@@ -144,17 +145,56 @@ public static class FileLocationTools
             targetDir.Refresh();
         }
 
-        const string versionUrl =
-            "https://oliverbetz.de/cms/files/Artikel/ExifTool-for-Windows/exiftool_latest_version.txt";
-
-        string remoteVersion;
-        using (var http = new HttpClient())
-        {
-            remoteVersion = (await http.GetStringAsync(versionUrl).ConfigureAwait(false)).Trim();
-        }
-
         var (existingFound, existingExe) = ExifToolExecutableExists(targetDir);
         var localVersion = await GetExifToolVersion(existingExe);
+
+        string? remoteVersion = null;
+
+        try
+        {
+            const string versionUrl =
+                "https://oliverbetz.de/cms/files/Artikel/ExifTool-for-Windows/exiftool_latest_version.txt";
+
+            using var http = new HttpClient();
+            remoteVersion = (await http.GetStringAsync(versionUrl).ConfigureAwait(false)).Trim();
+        }
+        catch (Exception ex)
+        {
+            progress?.Report($"Direct version check failed ({ex.Message}), trying fallback...");
+        }
+
+        if (string.IsNullOrWhiteSpace(remoteVersion))
+        {
+            try
+            {
+                const string fallbackUrl =
+                    "https://oliverbetz.de/pages/Artikel/ExifTool-for-Windows";
+
+                using var http = new HttpClient();
+                var html = await http.GetStringAsync(fallbackUrl).ConfigureAwait(false);
+                remoteVersion = ParseExifToolVersionFromHtml(html);
+
+                progress?.Report(!string.IsNullOrWhiteSpace(remoteVersion)
+                    ? $"Fallback version check found version {remoteVersion}."
+                    : "Fallback version check did not find a version number.");
+            }
+            catch (Exception ex)
+            {
+                progress?.Report($"Fallback version check also failed ({ex.Message}).");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(remoteVersion))
+        {
+            if (existingFound)
+            {
+                progress?.Report(
+                    $"Could not check for updates but ExifTool {localVersion ?? "unknown"} is available at {existingExe!.FullName}.");
+                return (true, "Could not check for updates; using existing ExifTool.", existingExe);
+            }
+
+            return (false, "Could not determine the latest ExifTool version and no local copy exists.", null);
+        }
 
         if (existingFound && !string.IsNullOrWhiteSpace(localVersion) &&
             string.Equals(localVersion, remoteVersion, StringComparison.OrdinalIgnoreCase))
@@ -201,10 +241,22 @@ public static class FileLocationTools
         }
         catch (HttpRequestException ex)
         {
+            if (existingFound)
+            {
+                progress?.Report($"Download failed ({ex.Message}) but existing ExifTool is available.");
+                return (true, $"Download failed but existing ExifTool is available: {ex.Message}", existingExe);
+            }
+
             return (false, $"Failed to download ExifTool: {ex.Message}", null);
         }
         catch (Exception ex)
         {
+            if (existingFound)
+            {
+                progress?.Report($"Update failed ({ex.Message}) but existing ExifTool is available.");
+                return (true, $"Update failed but existing ExifTool is available: {ex.Message}", existingExe);
+            }
+
             return (false, $"An error occurred while setting up ExifTool: {ex.Message}", null);
         }
         finally
@@ -213,7 +265,17 @@ public static class FileLocationTools
         }
     }
 
-    
+    /// <summary>
+    ///     Parses the ExifTool version number from the HTML of the ExifTool for Windows page
+    ///     by looking for links like ExifTool_install_13.52_32.exe.
+    /// </summary>
+    private static string? ParseExifToolVersionFromHtml(string html)
+    {
+        var match = Regex.Match(html,
+            @"ExifTool_install_(\d+\.\d+)_\d+\.exe",
+            RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : null;
+    }
 
     public static async Task<(bool Success, string Message, FileInfo? FfmpegExe, FileInfo? FfprobeExe)>
         FindDownloadUpdateFfmpegAndFfprobe(
@@ -231,8 +293,14 @@ public static class FileLocationTools
             targetDirectory.Refresh();
         }
 
-        string? tempFfmpegZipPath = null;
-        string? tempFfprobeZipPath = null;
+        var (existingFfmpegFound, existingFfmpegExe) = FfmpegExecutableExists(targetDirectory);
+        var (existingFfprobeFound, existingFfprobeExe) = FfprobeExecutableExists(targetDirectory);
+        var bothExist = existingFfmpegFound && existingFfprobeFound;
+        var localVersion = bothExist ? await GetFfmpegVersion(existingFfmpegExe) : null;
+
+        string? remoteVersion = null;
+        string? ffmpegUrl = null;
+        string? ffprobeUrl = null;
 
         try
         {
@@ -245,52 +313,68 @@ public static class FileLocationTools
             using var apiDocument = JsonDocument.Parse(apiResponse);
             var apiData = apiDocument.RootElement;
 
-            if (!apiData.TryGetProperty("bin", out var binElement) ||
-                !binElement.TryGetProperty("windows-64", out var windows64Element))
-                return (false, "Could not parse ffmpeg download information from API.", null, null);
+            if (apiData.TryGetProperty("bin", out var binElement) &&
+                binElement.TryGetProperty("windows-64", out var windows64Element))
+            {
+                ffmpegUrl = windows64Element.TryGetProperty("ffmpeg", out var ffmpegElement)
+                    ? ffmpegElement.GetString()
+                    : null;
+                ffprobeUrl = windows64Element.TryGetProperty("ffprobe", out var ffprobeElement)
+                    ? ffprobeElement.GetString()
+                    : null;
+            }
 
-            var ffmpegUrl = windows64Element.TryGetProperty("ffmpeg", out var ffmpegElement)
-                ? ffmpegElement.GetString()
-                : null;
-            var ffprobeUrl = windows64Element.TryGetProperty("ffprobe", out var ffprobeElement)
-                ? ffprobeElement.GetString()
-                : null;
-
-            if (string.IsNullOrWhiteSpace(ffmpegUrl) || string.IsNullOrWhiteSpace(ffprobeUrl))
-                return (false, "Could not retrieve ffmpeg download URLs from API response.", null, null);
-
-            var remoteVersion = apiData.TryGetProperty("version", out var versionElement)
+            remoteVersion = apiData.TryGetProperty("version", out var versionElement)
                 ? versionElement.GetString() ?? "unknown"
                 : "unknown";
 
             progress?.Report($"Latest ffmpeg version: {remoteVersion}");
+        }
+        catch (Exception ex)
+        {
+            progress?.Report($"Version check failed ({ex.Message}).");
+        }
 
-            var (existingFfmpegFound, existingFfmpegExe) = FfmpegExecutableExists(targetDirectory);
-            var (existingFfprobeFound, existingFfprobeExe) = FfprobeExecutableExists(targetDirectory);
-
-            if (existingFfmpegFound && existingFfprobeFound)
+        if (string.IsNullOrWhiteSpace(remoteVersion) ||
+            string.IsNullOrWhiteSpace(ffmpegUrl) || string.IsNullOrWhiteSpace(ffprobeUrl))
+        {
+            if (bothExist)
             {
-                var localVersion = await GetFfmpegVersion(existingFfmpegExe);
-
-                if (!string.IsNullOrWhiteSpace(localVersion) &&
-                    string.Equals(localVersion, remoteVersion, StringComparison.OrdinalIgnoreCase))
-                {
-                    progress?.Report(
-                        $"ffmpeg {localVersion} already available at {existingFfmpegExe!.FullName}.");
-                    return (true, "ffmpeg and ffprobe already up to date.", existingFfmpegExe,
-                        existingFfprobeExe);
-                }
-
                 progress?.Report(
-                    $"Updating ffmpeg from {localVersion ?? "unknown"} to {remoteVersion}...");
+                    $"Could not check for updates but ffmpeg {localVersion ?? "unknown"} is available at {existingFfmpegExe!.FullName}.");
+                return (true, "Could not check for updates; using existing ffmpeg and ffprobe.",
+                    existingFfmpegExe, existingFfprobeExe);
             }
-            else
-            {
-                progress?.Report($"Downloading ffmpeg {remoteVersion}...");
-            }
+
+            return (false,
+                "Could not determine the latest ffmpeg version or download URLs and no local copy exists.",
+                null, null);
+        }
+
+        if (bothExist && !string.IsNullOrWhiteSpace(localVersion) &&
+            string.Equals(localVersion, remoteVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            progress?.Report(
+                $"ffmpeg {localVersion} already available at {existingFfmpegExe!.FullName}.");
+            return (true, "ffmpeg and ffprobe already up to date.", existingFfmpegExe,
+                existingFfprobeExe);
+        }
+
+        string? tempFfmpegZipPath = null;
+        string? tempFfprobeZipPath = null;
+
+        try
+        {
+            progress?.Report(
+                bothExist
+                    ? $"Updating ffmpeg from {localVersion ?? "unknown"} to {remoteVersion}..."
+                    : $"Downloading ffmpeg {remoteVersion}...");
 
             tempFfmpegZipPath = Path.Combine(targetDirectory.FullName, $"ffmpeg-{Guid.NewGuid():N}.zip");
             tempFfprobeZipPath = Path.Combine(targetDirectory.FullName, $"ffprobe-{Guid.NewGuid():N}.zip");
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "PointlessWaymarks-Utilities");
 
             await DownloadFileAsync(httpClient, ffmpegUrl, tempFfmpegZipPath, "ffmpeg", progress);
             await DownloadFileAsync(httpClient, ffprobeUrl, tempFfprobeZipPath, "ffprobe", progress);
@@ -316,10 +400,24 @@ public static class FileLocationTools
         }
         catch (HttpRequestException ex)
         {
+            if (bothExist)
+            {
+                progress?.Report($"Download failed ({ex.Message}) but existing ffmpeg is available.");
+                return (true, $"Download failed but existing ffmpeg is available: {ex.Message}",
+                    existingFfmpegExe, existingFfprobeExe);
+            }
+
             return (false, $"Failed to download ffmpeg: {ex.Message}", null, null);
         }
         catch (Exception ex)
         {
+            if (bothExist)
+            {
+                progress?.Report($"Update failed ({ex.Message}) but existing ffmpeg is available.");
+                return (true, $"Update failed but existing ffmpeg is available: {ex.Message}",
+                    existingFfmpegExe, existingFfprobeExe);
+            }
+
             return (false, $"An error occurred while setting up ffmpeg: {ex.Message}", null, null);
         }
         finally

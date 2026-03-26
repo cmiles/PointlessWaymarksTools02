@@ -61,14 +61,55 @@ public static class WpfHtmlResourcesHelper
 
     public static string LocalMapCommonJs()
     {
+        return ReadEmbeddedText("localMapCommon.js");
+    }
+
+    public static string LeafletJs()
+    {
+        return ReadEmbeddedText("leaflet.js");
+    }
+
+    public static string LeafletCss()
+    {
+        return ReadEmbeddedText("leaflet.css");
+    }
+
+    public static string ChartJs()
+    {
+        return ReadEmbeddedText("chart.umd.min.js");
+    }
+
+    public static List<FileBuilderCreate> LeafletImages()
+    {
+        var returnList = new List<FileBuilderCreate>();
+        var embeddedProvider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly());
+
+        var imageResources = embeddedProvider.GetDirectoryContents("")
+            .Where(x => x.Name.Contains("marker-icon") || x.Name.Contains(".marker-shadow") || x.Name.Contains(".layers"));
+
+        foreach (var resource in imageResources)
+        {
+            using var stream = resource.CreateReadStream();
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            var binaryResource = ms.ToArray();
+
+            returnList.Add(new FileBuilderCreate(
+                $@"images\{resource.Name.Replace("WpfHtmlResources.images.", string.Empty)}",
+                binaryResource));
+        }
+
+        return returnList;
+    }
+
+    private static string ReadEmbeddedText(string nameFragment)
+    {
         var embeddedProvider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly());
 
         var siteResource = embeddedProvider.GetDirectoryContents("")
-            .Single(x => x.Name.Contains("localMapCommon"));
+            .Single(x => x.Name.EndsWith(nameFragment));
         using var embeddedAsStream = siteResource.CreateReadStream();
         var reader = new StreamReader(embeddedAsStream);
-        var resourceString = reader.ReadToEnd();
-
-        return resourceString;
+        return reader.ReadToEnd();
     }
 }
