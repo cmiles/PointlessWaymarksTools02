@@ -19,6 +19,10 @@ public partial class PhotoPreviewWindow
     private double _scrollStartH;
     private double _scrollStartV;
 
+    // Lock Zoom state - stored as percentages (0.0-1.0) of scrollable extent
+    private double _lockedScrollPercentageX;
+    private double _lockedScrollPercentageY;
+
     public PhotoPreviewWindow()
     {
         InitializeComponent();
@@ -154,6 +158,10 @@ public partial class PhotoPreviewWindow
     {
         if (e.PropertyName == nameof(PhotoPreviewContext.DisplayTitle))
             Dispatcher.InvokeAsync(() => WindowTitle = $"Photo Preview - {PreviewContext.DisplayTitle}");
+
+        // When loading starts and Lock Zoom is enabled, save the current scroll position
+        if (e.PropertyName == nameof(PhotoPreviewContext.IsLoading) && PreviewContext.IsLoading && PreviewContext.LockZoom)
+            Dispatcher.InvokeAsync(SaveScrollPosition);
     }
 
     private async void OpenFileInExplorer_OnClick(object sender, RoutedEventArgs e)
@@ -165,8 +173,67 @@ public partial class PhotoPreviewWindow
 
     private void OnPreviewImageLoaded(object? sender, EventArgs e)
     {
-        // Calculate fit-to-window zoom on the UI thread after each new image loads
-        Dispatcher.InvokeAsync(FitImageToWindow);
+        // Handle zoom/scroll on the UI thread after each new image loads
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (PreviewContext.LockZoom && PreviewContext.PreviewImage != null)
+            {
+                // Preserve current zoom level - it's already set in PreviewContext.ZoomLevel
+                // Force layout so the ScrollViewer recalculates extents with the current zoom
+                ImageScrollViewer.UpdateLayout();
+
+                // Restore scroll position from stored percentages
+                RestoreScrollPosition();
+            }
+            else
+            {
+                // Default behavior: fit to window
+                FitImageToWindow();
+            }
+        });
+    }
+
+    /// <summary>
+    ///     Saves the current scroll position as percentages of the scrollable extent.
+    ///     Call this before navigating to capture the user's view position.
+    /// </summary>
+    private void SaveScrollPosition()
+    {
+        var extentWidth = ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth;
+        var extentHeight = ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight;
+
+        _lockedScrollPercentageX = extentWidth > 0
+            ? ImageScrollViewer.HorizontalOffset / extentWidth
+            : 0.5; // Default to center if no scrollable extent
+
+        _lockedScrollPercentageY = extentHeight > 0
+            ? ImageScrollViewer.VerticalOffset / extentHeight
+            : 0.5; // Default to center if no scrollable extent
+
+        // Clamp to valid range
+        _lockedScrollPercentageX = Math.Clamp(_lockedScrollPercentageX, 0.0, 1.0);
+        _lockedScrollPercentageY = Math.Clamp(_lockedScrollPercentageY, 0.0, 1.0);
+    }
+
+    /// <summary>
+    ///     Restores the scroll position from stored percentages.
+    ///     Handles different aspect ratios by clamping to valid scroll extents.
+    /// </summary>
+    private void RestoreScrollPosition()
+    {
+        var extentWidth = ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth;
+        var extentHeight = ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight;
+
+        // Calculate target offsets from percentages
+        var targetH = extentWidth > 0 ? _lockedScrollPercentageX * extentWidth : 0;
+        var targetV = extentHeight > 0 ? _lockedScrollPercentageY * extentHeight : 0;
+
+        // Clamp to valid scroll ranges (smart fallback for different aspect ratios)
+        targetH = Math.Clamp(targetH, 0, Math.Max(0, extentWidth));
+        targetV = Math.Clamp(targetV, 0, Math.Max(0, extentHeight));
+
+        ImageScrollViewer.ScrollToHorizontalOffset(targetH);
+        ImageScrollViewer.ScrollToVerticalOffset(targetV);
     }
 
     private void ZoomActual_OnClick(object sender, RoutedEventArgs e)

@@ -37,6 +37,7 @@ public partial class PhotoPreviewContext
     public bool FilterUnratedOnly { get; set; }
     public BitmapSource? HistogramImage { get; set; }
     public bool IsLoading { get; set; }
+    public bool LockZoom { get; set; }
     public string MetadataOverlayText { get; set; } = string.Empty;
     public BitmapSource? PreviewImage { get; set; }
     public int Rating { get; set; }
@@ -144,7 +145,7 @@ public partial class PhotoPreviewContext
 
             if (e.PropertyName == nameof(Rating) && !context._suppressRatingPersist)
                 context.StatusContext.RunFireAndForgetNonBlockingTask(() =>
-                    context.PersistRating(context.Rating));
+                    context.PersistRating(context.Rating, context.CurrentFilePath));
         };
 
         return context;
@@ -287,16 +288,16 @@ public partial class PhotoPreviewContext
 
             // ISO
             string? iso = null;
-            var isoString = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagIsoEquivalent);
+            var isoString = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagIsoEquivalent);
             if (!string.IsNullOrWhiteSpace(isoString) && int.TryParse(isoString, out var isoValue))
                 iso = $"ISO {isoValue}";
 
             // Focal length
-            var focalLength = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagFocalLength)?.Trim() ??
+            var focalLength = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagFocalLength)?.Trim() ??
                               string.Empty;
 
             // Aperture with cleanup
-            var aperture = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagAperture)?.Trim() ?? string.Empty;
+            var aperture = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagAperture)?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(aperture))
                 aperture = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagFNumber)?.Trim() ?? string.Empty;
             aperture = ApertureCleanup(aperture);
@@ -988,15 +989,15 @@ public partial class PhotoPreviewContext
         }
     }
 
-    private async Task PersistRating(int rating)
+    private async Task PersistRating(int rating, string filePath)
     {
         await ThreadSwitcher.ResumeBackgroundAsync();
 
-        if (!string.IsNullOrWhiteSpace(CurrentFilePath))
+        if (!string.IsNullOrWhiteSpace(filePath))
         {
             try
             {
-                await WriteRatingWithExifTool(CurrentFilePath, rating);
+                await WriteRatingWithExifTool(filePath, rating);
             }
             catch (Exception ex)
             {
@@ -1005,7 +1006,7 @@ public partial class PhotoPreviewContext
             }
 
             WeakReferenceMessenger.Default.Send(
-                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating)));
+                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(filePath, rating)));
 
             var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
             await StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
@@ -1125,7 +1126,7 @@ public partial class PhotoPreviewContext
         Rating = rating;
         _suppressRatingPersist = false;
 
-        StatusContext.RunFireAndForgetNonBlockingTask(() => PersistRating(rating));
+        StatusContext.RunFireAndForgetNonBlockingTask(() => PersistRating(rating, CurrentFilePath));
     }
 
     [NonBlockingCommand]
@@ -1140,6 +1141,14 @@ public partial class PhotoPreviewContext
     public async Task ToggleHistogram()
     {
         ShowHistogram = !ShowHistogram;
+    }
+
+    [NonBlockingCommand]
+    public async Task ToggleLockZoom()
+    {
+        LockZoom = !LockZoom;
+        var state = LockZoom ? "ON" : "OFF";
+        await StatusContext.ToastSuccess($"Lock Zoom: {state}");
     }
 
     [NonBlockingCommand]
