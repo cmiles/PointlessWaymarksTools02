@@ -7,6 +7,7 @@ using HtmlTableHelper;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Xmp;
 using PointlessWaymarks.CommonTools;
+using PointlessWaymarks.SpatialTools;
 using PointlessWaymarks.WpfCommon.Status;
 using XmpCore;
 
@@ -34,9 +35,9 @@ public static class FileMetadataReport
             }).ToHtmlTable(new { @class = "pure-table pure-table-striped" });
 
         var xmpDirectory = ImageMetadataReader.ReadMetadata(selectedFile.FullName).OfType<XmpDirectory>()
-            .FirstOrDefault();
+            .ToList();
 
-        var xmpMetadata = xmpDirectory?.GetXmpProperties().Select(x => new { XmpKey = x.Key, XmpValue = x.Value })
+        var xmpMetadata = xmpDirectory.GetXmpProperties().Select(x => new { XmpKey = x.Path, XmpValue = x.Value })
             .ToHtmlTable(new { @class = "pure-table pure-table-striped" });
 
         var htmlStringBuilder = new StringBuilder();
@@ -47,8 +48,7 @@ public static class FileMetadataReport
             htmlStringBuilder.AppendLine(tagHtml);
         }
 
-        if (xmpDirectory != null &&
-            xmpDirectory.GetXmpProperties().Select(x => new { XmpKey = x.Key, XmpValue = x.Value }).Any())
+        if (xmpDirectory.GetXmpProperties().Select(x => new { XmpKey = x.Path, XmpValue = x.Value }).Any())
         {
             htmlStringBuilder.AppendLine("<br><br><h3>XMP - Part 2</h3><br>");
             htmlStringBuilder.AppendLine(xmpMetadata);

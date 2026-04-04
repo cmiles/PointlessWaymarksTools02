@@ -180,8 +180,6 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             return;
         }
 
-
-
         var file = new FileInfo(fileName);
         var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(file, FfprobeExe);
 

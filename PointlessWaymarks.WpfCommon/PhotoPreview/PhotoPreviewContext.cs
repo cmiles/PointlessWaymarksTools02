@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows.Media;
@@ -7,10 +7,13 @@ using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.Messaging;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
+using MetadataExtractor.Formats.Xmp;
 using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.LlamaAspects;
+using PointlessWaymarks.SpatialTools;
 using PointlessWaymarks.WpfCommon.AppMessages;
 using PointlessWaymarks.WpfCommon.Status;
+using XmpCore;
 
 namespace PointlessWaymarks.WpfCommon.PhotoPreview;
 
@@ -18,21 +21,28 @@ namespace PointlessWaymarks.WpfCommon.PhotoPreview;
 [GenerateStatusCommands]
 public partial class PhotoPreviewContext
 {
+    private const int MaxCacheSize = 15;
     private readonly Lock _ctsLock = new();
-    private readonly ConcurrentDictionary<string, PreviewCacheEntry> _previewCache = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, PreviewCacheEntry> _previewCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private string? _lastTempFile;
-    private CancellationTokenSource? _previewCts;
     private CancellationTokenSource? _prefetchCts;
+    private CancellationTokenSource? _previewCts;
+    private bool _suppressRatingPersist;
     public string CurrentFilePath { get; set; } = string.Empty;
     public string DisplayTitle { get; set; } = "Photo Preview";
     public BitmapSource? EdgeOverlayImage { get; set; }
     public bool FilterUnratedOnly { get; set; }
     public BitmapSource? HistogramImage { get; set; }
     public bool IsLoading { get; set; }
+    public string MetadataOverlayText { get; set; } = string.Empty;
     public BitmapSource? PreviewImage { get; set; }
     public int Rating { get; set; }
     public bool ShowEdgeOverlay { get; set; }
     public bool ShowHistogram { get; set; } = true;
+    public bool ShowMetadataOverlay { get; set; }
     public required StatusControlContext StatusContext { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
     public double ZoomLevel { get; set; } = 1.0;
@@ -52,6 +62,24 @@ public partial class PhotoPreviewContext
         var transformed = new TransformedBitmap(source, new RotateTransform(angle));
         transformed.Freeze();
         return transformed;
+    }
+
+    private static string BuildCameraString(string? make, string? model)
+    {
+        if (string.IsNullOrWhiteSpace(make) && string.IsNullOrWhiteSpace(model))
+            return string.Empty;
+
+        if (string.IsNullOrWhiteSpace(make))
+            return model!;
+
+        if (string.IsNullOrWhiteSpace(model))
+            return make;
+
+        // If model already contains the make, just use model
+        if (model.StartsWith(make, StringComparison.OrdinalIgnoreCase))
+            return model;
+
+        return $"{make} {model}";
     }
 
     public void Cleanup()
@@ -113,9 +141,274 @@ public partial class PhotoPreviewContext
             if (e.PropertyName == nameof(FilterUnratedOnly))
                 WeakReferenceMessenger.Default.Send(
                     new PhotoPreviewFilterUnratedMessage(context.FilterUnratedOnly));
+
+            if (e.PropertyName == nameof(Rating) && !context._suppressRatingPersist)
+                context.StatusContext.RunFireAndForgetNonBlockingTask(() =>
+                    context.PersistRating(context.Rating));
         };
 
         return context;
+    }
+
+    /// <summary>
+    ///     Copies pixel data from a BitmapSource into a new standalone BitmapSource
+    ///     that has no reference to a BitmapDecoder. This prevents thread affinity
+    ///     issues when the bitmap is later wrapped by FormatConvertedBitmap or
+    ///     TransformedBitmap on a different thread and Freeze() is called, which
+    ///     would otherwise walk the dependency chain to the decoder and fail with
+    ///     "The calling thread cannot access this object".
+    /// </summary>
+    private static BitmapSource DetachFromDecoder(BitmapSource source)
+    {
+        var width = source.PixelWidth;
+        var height = source.PixelHeight;
+        var format = source.Format;
+        var stride = (width * format.BitsPerPixel + 7) / 8;
+        var pixels = new byte[stride * height];
+        source.CopyPixels(pixels, stride, 0);
+        var result = BitmapSource.Create(width, height, source.DpiX, source.DpiY,
+            format, source.Palette, pixels, stride);
+        result.Freeze();
+        return result;
+    }
+
+    private void EvictLruEntries()
+    {
+        while (_previewCache.Count > MaxCacheSize)
+        {
+            var oldest = _previewCache
+                .OrderBy(x => x.Value.LastAccessedTicks)
+                .First();
+            _previewCache.TryRemove(oldest.Key, out _);
+        }
+    }
+
+    /// <summary>
+    ///     Cleans up an aperture string to a consistent ƒ/X.X format.
+    ///     Ported from PhotoGenerator.ApertureCleanup.
+    /// </summary>
+    private static string ApertureCleanup(string? aperture)
+    {
+        if (string.IsNullOrWhiteSpace(aperture))
+            return string.Empty;
+
+        var apertureForCleaning = aperture.Trim();
+        if (apertureForCleaning.StartsWith("f/", StringComparison.OrdinalIgnoreCase) ||
+            apertureForCleaning.StartsWith("ƒ/", StringComparison.OrdinalIgnoreCase))
+            apertureForCleaning = apertureForCleaning.Substring(2);
+        else if (apertureForCleaning.StartsWith("f", StringComparison.OrdinalIgnoreCase) ||
+                 apertureForCleaning.StartsWith("ƒ", StringComparison.OrdinalIgnoreCase))
+            apertureForCleaning = apertureForCleaning.Substring(1);
+
+        if (decimal.TryParse(apertureForCleaning, out var apertureValue))
+        {
+            var cultureSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+            var apertureStringDecimal = apertureValue.ToString(CultureInfo.CurrentCulture);
+            apertureStringDecimal = apertureStringDecimal.Contains(cultureSeparator)
+                ? apertureStringDecimal.TrimEnd('0').TrimEnd(cultureSeparator.ToCharArray())
+                : apertureStringDecimal;
+
+            return $"ƒ/{apertureStringDecimal}";
+        }
+
+        return aperture.Trim();
+    }
+
+    /// <summary>
+    ///     Converts a shutter speed APEX value to a human-readable string.
+    ///     Ported from ExifHelpers.ShutterSpeedToHumanReadableString.
+    /// </summary>
+    private static string ShutterSpeedToHumanReadableString(Rational? toProcess)
+    {
+        if (toProcess == null) return string.Empty;
+
+        if (toProcess.Value.Numerator < 0)
+            return Math.Round(Math.Pow(2, (double)-1 * toProcess.Value.Numerator / toProcess.Value.Denominator), 1)
+                .ToString("N1") + "s";
+
+        return
+            $"1/{Math.Round(Math.Pow(2, (double)toProcess.Value.Numerator / toProcess.Value.Denominator), 1):N0}s";
+    }
+
+    /// <summary>
+    ///     Converts an exposure time to a human-readable string.
+    ///     Ported from ExifHelpers.ExposureTimeToHumanReadableString.
+    /// </summary>
+    private static string ExposureTimeToHumanReadableString(Rational? toProcess)
+    {
+        if (toProcess == null) return string.Empty;
+
+        var roughValue = (double)toProcess.Value.Numerator / toProcess.Value.Denominator;
+
+        if (roughValue >= 1) return $"{roughValue:N1}s";
+
+        return $"1/{Math.Round((double)toProcess.Value.Denominator / toProcess.Value.Numerator, 1):N0}s";
+    }
+
+    /// <summary>
+    ///     Extracts camera metadata (camera, lens, ISO, aperture, shutter speed) from a file.
+    ///     Uses comprehensive extraction with XMP fallbacks, modeled after PhotoGenerator.PhotoMetadataFromFile.
+    /// </summary>
+    private static string ExtractCameraMetadata(string fullFilePath)
+    {
+        try
+        {
+            var exifIfdDirectory = ImageMetadataReader.ReadMetadata(fullFilePath).OfType<ExifIfd0Directory>().ToList();
+            var exifSubIfdDirectory = ImageMetadataReader.ReadMetadata(fullFilePath).OfType<ExifSubIfdDirectory>()
+                .ToList();
+            var xmpDirectory = ImageMetadataReader.ReadMetadata(fullFilePath).OfType<XmpDirectory>().ToList();
+
+            // Camera make and model
+            var cameraMake = exifIfdDirectory.GetDescription(ExifDirectoryBase.TagMake)?.Trim() ??
+                             exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagMake)?.Trim();
+            var cameraModel = exifIfdDirectory.GetDescription(ExifDirectoryBase.TagModel)?.Trim() ??
+                              exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagModel)?.Trim();
+
+            // Lens with XMP fallbacks
+            var lens = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagLensModel)?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(lens) || lens == "----")
+                lens = xmpDirectory.GetProperty(XmpConstants.NsExifAux, "Lens")?.Value ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(lens) || lens == "----")
+            {
+                lens = xmpDirectory.GetProperty(XmpConstants.NsCameraraw, "LensProfileName")?.Value ??
+                       string.Empty;
+
+                if (lens.StartsWith("Adobe ("))
+                {
+                    lens = lens[7..];
+                    if (lens.EndsWith(")"))
+                        lens = lens[..^1];
+                }
+            }
+
+            if (lens == "----") lens = string.Empty;
+
+            // ISO
+            string? iso = null;
+            var isoString = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagIsoEquivalent);
+            if (!string.IsNullOrWhiteSpace(isoString) && int.TryParse(isoString, out var isoValue))
+                iso = $"ISO {isoValue}";
+
+            // Focal length
+            var focalLength = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagFocalLength)?.Trim() ??
+                              string.Empty;
+
+            // Aperture with cleanup
+            var aperture = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagAperture)?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(aperture))
+                aperture = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagFNumber)?.Trim() ?? string.Empty;
+            aperture = ApertureCleanup(aperture);
+
+            // Shutter speed with proper formatting
+            var shutterSpeed = string.Empty;
+            if (exifSubIfdDirectory?.TryGetRational(ExifDirectoryBase.TagShutterSpeed, out var shutterValue) ?? false)
+                shutterSpeed = ShutterSpeedToHumanReadableString(shutterValue);
+            else if (exifSubIfdDirectory?.TryGetRational(ExifDirectoryBase.TagExposureTime, out var exposureValue) ??
+                     false)
+                shutterSpeed = ExposureTimeToHumanReadableString(exposureValue);
+
+            // Build display string
+            var sb = new StringBuilder();
+
+            // Camera line: combine make and model, avoiding redundancy
+            var camera = BuildCameraString(cameraMake, cameraModel);
+            if (!string.IsNullOrWhiteSpace(camera))
+                sb.AppendLine(camera);
+
+            if (!string.IsNullOrWhiteSpace(lens))
+                sb.AppendLine(lens);
+
+            // Settings line: focal, aperture, shutter, ISO
+            var settings = new List<string>();
+            if (!string.IsNullOrWhiteSpace(focalLength)) settings.Add(focalLength);
+            if (!string.IsNullOrWhiteSpace(aperture)) settings.Add(aperture);
+            if (!string.IsNullOrWhiteSpace(shutterSpeed)) settings.Add(shutterSpeed);
+            if (!string.IsNullOrWhiteSpace(iso)) settings.Add(iso);
+
+            if (settings.Count > 0)
+                sb.AppendLine(string.Join("  ", settings));
+
+            return sb.ToString().TrimEnd();
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static async Task<PreviewCacheEntry?> GenerateCacheEntry(string fullFilePath,
+        CancellationToken cancellationToken)
+    {
+        var file = new FileInfo(fullFilePath);
+        if (!file.Exists) return null;
+
+        var bytes = await Task.Run(() => File.ReadAllBytes(file.FullName), cancellationToken)
+            .ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var exifRotation = GetExifRotation(bytes);
+        BitmapSource? source = null;
+
+        try
+        {
+            source = await Task.Run(() =>
+            {
+                using var ms = new MemoryStream(bytes);
+                var decoder = BitmapDecoder.Create(ms,
+                    BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count > 0)
+                {
+                    var frame = decoder.Frames[0];
+                    var rotated = ApplyRotation(frame, exifRotation);
+                    if (!rotated.IsFrozen) rotated.Freeze();
+                    return rotated;
+                }
+
+                return null;
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // WIC decode failed
+        }
+
+        if (source == null) return null;
+
+        source = DetachFromDecoder(source);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var histogramImage = await Task.Run(() => GenerateHistogram(source, cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var edgeOverlay = await Task.Run(() => GenerateEdgeOverlay(source, cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadataText = ExtractCameraMetadata(fullFilePath);
+
+        var fileSizeMb = file.Length / 1024.0 / 1024.0;
+        var displayTitle =
+            $"{Path.GetFileName(fullFilePath)} — {source.PixelWidth}×{source.PixelHeight} — {fileSizeMb:N1} MB";
+
+        return new PreviewCacheEntry
+        {
+            PreviewImage = source,
+            HistogramImage = histogramImage,
+            EdgeOverlayImage = edgeOverlay,
+            DisplayTitle = displayTitle,
+            FullFilePath = fullFilePath,
+            MetadataOverlayText = metadataText
+        };
     }
 
     /// <summary>
@@ -187,7 +480,7 @@ public partial class PhotoPreviewContext
                         - gray[(y - 1) * workWidth + x]
                         - gray[(y + 1) * workWidth + x]
                         - gray[y * workWidth + (x - 1)]
-                        - gray[y * workWidth + (x + 1)];
+                        - gray[y * workWidth + x + 1];
 
                     edges[y * workWidth + x] = (byte)Math.Clamp(Math.Abs(laplacian), 0, 255);
                 }
@@ -497,6 +790,8 @@ public partial class PhotoPreviewContext
                 return;
             }
 
+            source = DetachFromDecoder(source);
+
             PreviewImage = source;
             PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
 
@@ -516,9 +811,25 @@ public partial class PhotoPreviewContext
 
             EdgeOverlayImage = edgeOverlay;
 
+            // Extract camera metadata
+            var metadataText = ExtractCameraMetadata(fullFilePath);
+            MetadataOverlayText = metadataText;
+
             var fileSizeMb = file.Length / 1024.0 / 1024.0;
-            DisplayTitle = $"{Path.GetFileName(fullFilePath)} — {source.PixelWidth}×{source.PixelHeight} — {fileSizeMb:N1} MB";
+            DisplayTitle =
+                $"{Path.GetFileName(fullFilePath)} — {source.PixelWidth}×{source.PixelHeight} — {fileSizeMb:N1} MB";
             StatusMessage = fullFilePath;
+
+            _previewCache[fullFilePath] = new PreviewCacheEntry
+            {
+                PreviewImage = source,
+                HistogramImage = histogramImage,
+                EdgeOverlayImage = edgeOverlay,
+                DisplayTitle = DisplayTitle,
+                FullFilePath = fullFilePath,
+                MetadataOverlayText = metadataText
+            };
+            EvictLruEntries();
 
             // Clean up old temp file
             CleanupTempFile();
@@ -616,16 +927,12 @@ public partial class PhotoPreviewContext
         WeakReferenceMessenger.Default.Send(new PhotoPreviewNextItemMessage());
     }
 
-    private void OnRatingChanged(PhotoItemRatingChangedData data)
-    {
-        if (string.Equals(data.FullFilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
-            Rating = data.Rating;
-    }
-
     private void OnPreviewRequested(PhotoPreviewRequestData data)
     {
         CurrentFilePath = data.FullFilePath;
+        _suppressRatingPersist = true;
         Rating = data.Rating;
+        _suppressRatingPersist = false;
 
         // Cancel any in-progress generation and start a new one
         CancellationTokenSource newCts;
@@ -638,22 +945,21 @@ public partial class PhotoPreviewContext
         }
 
         // Check if we have a cached preview for this file
-        if (_previewCache.TryRemove(data.FullFilePath, out var cached))
+        if (_previewCache.TryGetValue(data.FullFilePath, out var cached))
         {
+            cached.LastAccessedTicks = Environment.TickCount64;
             StatusContext.RunBlockingTask(async () =>
             {
                 await ThreadSwitcher.ResumeBackgroundAsync();
                 IsLoading = true;
-                DisplayTitle = data.DisplayTitle;
 
                 PreviewImage = cached.PreviewImage;
                 PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
                 HistogramImage = cached.HistogramImage;
                 EdgeOverlayImage = cached.EdgeOverlayImage;
-
-                StatusMessage = cached.PreviewImage != null
-                    ? $"{Path.GetFileName(data.FullFilePath)} — {cached.PreviewImage.PixelWidth}×{cached.PreviewImage.PixelHeight} (cached)"
-                    : "Could not generate a preview for this file.";
+                MetadataOverlayText = cached.MetadataOverlayText;
+                DisplayTitle = cached.DisplayTitle;
+                StatusMessage = cached.FullFilePath;
 
                 IsLoading = false;
                 CleanupTempFile();
@@ -672,21 +978,19 @@ public partial class PhotoPreviewContext
         }
     }
 
-    /// <summary>
-    ///     Raised on the background thread after a new PreviewImage has been set.
-    ///     The window subscribes to this to calculate fit-to-window zoom.
-    /// </summary>
-    public event EventHandler? PreviewImageLoaded;
-
-    [NonBlockingCommand]
-    public async Task PreviousItemMessage()
+    private void OnRatingChanged(PhotoItemRatingChangedData data)
     {
-        WeakReferenceMessenger.Default.Send(new PhotoPreviewPreviousItemMessage());
+        if (string.Equals(data.FullFilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            _suppressRatingPersist = true;
+            Rating = data.Rating;
+            _suppressRatingPersist = false;
+        }
     }
 
-    private async Task SetRatingInternal(int rating)
+    private async Task PersistRating(int rating)
     {
-        Rating = rating;
+        await ThreadSwitcher.ResumeBackgroundAsync();
 
         if (!string.IsNullOrWhiteSpace(CurrentFilePath))
         {
@@ -700,98 +1004,12 @@ public partial class PhotoPreviewContext
                 return;
             }
 
+            WeakReferenceMessenger.Default.Send(
+                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating)));
+
             var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
             await StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
-
-            WeakReferenceMessenger.Default.Send(
-                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, Rating)));
         }
-    }
-
-    private static async Task WriteRatingWithExifTool(string filePath, int rating)
-    {
-        var exifToolDir = FileLocationTools.DefaultExifToolStorageDirectory();
-        var exifToolExe = exifToolDir.GetFiles("exiftool*.exe", SearchOption.AllDirectories)
-            .OrderByDescending(f => f.Name.Equals("exiftool.exe", StringComparison.OrdinalIgnoreCase))
-            .FirstOrDefault();
-
-        if (exifToolExe is not { Exists: true })
-            throw new FileNotFoundException("ExifTool not found. Please ensure ExifTool is installed.");
-
-        var args = new List<string>
-        {
-            "-overwrite_original",
-            $"-Rating={rating}",
-            $"-XMP:Rating={rating}",
-            filePath
-        };
-
-        var argsFilePath = Path.Combine(Path.GetTempPath(), $"exiftool-rating-{Guid.NewGuid():N}.txt");
-
-        try
-        {
-            await File.WriteAllLinesAsync(argsFilePath, args, new UTF8Encoding(false));
-
-            var psi = new ProcessStartInfo(exifToolExe.FullName)
-            {
-                Arguments = $"-@ \"{argsFilePath}\"",
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var proc = Process.Start(psi)
-                             ?? throw new InvalidOperationException("Failed to start ExifTool process.");
-
-            var stdErr = await proc.StandardError.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-
-            if (proc.ExitCode != 0)
-                throw new InvalidOperationException($"ExifTool error ({proc.ExitCode}): {stdErr}");
-        }
-        finally
-        {
-            FileLocationTools.TryDeleteFile(argsFilePath);
-        }
-    }
-
-    [NonBlockingCommand]
-    public async Task SetRating0() => await SetRatingInternal(0);
-
-    [NonBlockingCommand]
-    public async Task SetRating1() => await SetRatingInternal(1);
-
-    [NonBlockingCommand]
-    public async Task SetRating2() => await SetRatingInternal(2);
-
-    [NonBlockingCommand]
-    public async Task SetRating3() => await SetRatingInternal(3);
-
-    [NonBlockingCommand]
-    public async Task SetRating4() => await SetRatingInternal(4);
-
-    [NonBlockingCommand]
-    public async Task SetRating5() => await SetRatingInternal(5);
-
-    [NonBlockingCommand]
-    public async Task ToggleFilterUnrated()
-    {
-        FilterUnratedOnly = !FilterUnratedOnly;
-        var state = FilterUnratedOnly ? "ON" : "OFF";
-        await StatusContext.ToastSuccess($"Unrated filter: {state}");
-    }
-
-    [NonBlockingCommand]
-    public async Task ToggleHistogram()
-    {
-        ShowHistogram = !ShowHistogram;
-    }
-
-    [NonBlockingCommand]
-    public async Task ToggleSharpness()
-    {
-        ShowEdgeOverlay = !ShowEdgeOverlay;
     }
 
     private void PrefetchUpcoming(List<string>? upcomingFilePaths)
@@ -808,96 +1026,160 @@ public partial class PhotoPreviewContext
             newPrefetchCts = _prefetchCts;
         }
 
-        // Evict cache entries that aren't in the upcoming list or the current file
-        var keepSet = new HashSet<string>(upcomingFilePaths, StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrWhiteSpace(CurrentFilePath)) keepSet.Add(CurrentFilePath);
-        foreach (var key in _previewCache.Keys)
-            if (!keepSet.Contains(key))
-                _previewCache.TryRemove(key, out _);
+        EvictLruEntries();
 
         _ = Task.Run(async () =>
         {
-            foreach (var filePath in upcomingFilePaths)
-            {
-                if (newPrefetchCts.Token.IsCancellationRequested) break;
-                if (_previewCache.ContainsKey(filePath)) continue;
-                if (!File.Exists(filePath)) continue;
+            var toPrefetch = upcomingFilePaths
+                .Where(f => !_previewCache.ContainsKey(f) && File.Exists(f))
+                .ToList();
 
-                try
+            await Parallel.ForEachAsync(toPrefetch,
+                new ParallelOptions
                 {
-                    var entry = await GenerateCacheEntry(filePath, newPrefetchCts.Token);
-                    if (entry != null)
-                        _previewCache.TryAdd(filePath, entry);
-                }
-                catch (OperationCanceledException)
+                    MaxDegreeOfParallelism = 3,
+                    CancellationToken = newPrefetchCts.Token
+                },
+                async (filePath, ct) =>
                 {
-                    break;
-                }
-                catch
-                {
-                    // Prefetch failures are non-critical
-                }
-            }
+                    try
+                    {
+                        var entry = await GenerateCacheEntry(filePath, ct);
+                        if (entry != null)
+                        {
+                            _previewCache.TryAdd(filePath, entry);
+                            EvictLruEntries();
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Expected during cancellation
+                    }
+                    catch
+                    {
+                        // Prefetch failures are non-critical
+                    }
+                });
         }, newPrefetchCts.Token);
     }
 
-    private static async Task<PreviewCacheEntry?> GenerateCacheEntry(string fullFilePath,
-        CancellationToken cancellationToken)
+    /// <summary>
+    ///     Raised on the background thread after a new PreviewImage has been set.
+    ///     The window subscribes to this to calculate fit-to-window zoom.
+    /// </summary>
+    public event EventHandler? PreviewImageLoaded;
+
+    [NonBlockingCommand]
+    public async Task PreviousItemMessage()
     {
-        var file = new FileInfo(fullFilePath);
-        if (!file.Exists) return null;
-
-        var bytes = await Task.Run(() => File.ReadAllBytes(file.FullName), cancellationToken)
-            .ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var exifRotation = GetExifRotation(bytes);
-        BitmapSource? source = null;
-
-        try
-        {
-            source = await Task.Run(() =>
-            {
-                using var ms = new MemoryStream(bytes);
-                var decoder = BitmapDecoder.Create(ms,
-                    BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-                if (decoder.Frames.Count > 0)
-                {
-                    var frame = decoder.Frames[0];
-                    var rotated = ApplyRotation(frame, exifRotation);
-                    if (!rotated.IsFrozen) rotated.Freeze();
-                    return rotated;
-                }
-
-                return null;
-            }, cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            // WIC decode failed
-        }
-
-        if (source == null) return null;
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var histogramImage = await Task.Run(() => GenerateHistogram(source, cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var edgeOverlay = await Task.Run(() => GenerateEdgeOverlay(source, cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-
-        return new PreviewCacheEntry(source, histogramImage, edgeOverlay);
+        WeakReferenceMessenger.Default.Send(new PhotoPreviewPreviousItemMessage());
     }
 
-    private record PreviewCacheEntry(
-        BitmapSource? PreviewImage,
-        BitmapSource? HistogramImage,
-        BitmapSource? EdgeOverlayImage);
+    [NonBlockingCommand]
+    public async Task SetRating0()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(0);
+    }
+
+    [NonBlockingCommand]
+    public async Task SetRating1()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(1);
+    }
+
+    [NonBlockingCommand]
+    public async Task SetRating2()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(2);
+    }
+
+    [NonBlockingCommand]
+    public async Task SetRating3()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(3);
+    }
+
+    [NonBlockingCommand]
+    public async Task SetRating4()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(4);
+    }
+
+    [NonBlockingCommand]
+    public async Task SetRating5()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+        SetRatingInternal(5);
+    }
+
+    private void SetRatingInternal(int rating)
+    {
+        if (rating == Rating) return;
+
+        _suppressRatingPersist = true;
+        Rating = rating;
+        _suppressRatingPersist = false;
+
+        StatusContext.RunFireAndForgetNonBlockingTask(() => PersistRating(rating));
+    }
+
+    [NonBlockingCommand]
+    public async Task ToggleFilterUnrated()
+    {
+        FilterUnratedOnly = !FilterUnratedOnly;
+        var state = FilterUnratedOnly ? "ON" : "OFF";
+        await StatusContext.ToastSuccess($"Unrated filter: {state}");
+    }
+
+    [NonBlockingCommand]
+    public async Task ToggleHistogram()
+    {
+        ShowHistogram = !ShowHistogram;
+    }
+
+    [NonBlockingCommand]
+    public async Task ToggleMetadataOverlay()
+    {
+        ShowMetadataOverlay = !ShowMetadataOverlay;
+    }
+
+    [NonBlockingCommand]
+    public async Task ToggleSharpness()
+    {
+        ShowEdgeOverlay = !ShowEdgeOverlay;
+    }
+
+    private static async Task WriteRatingWithExifTool(string filePath, int rating)
+    {
+        var (success, _, exifToolExe) = await FileLocationTools.FindDownloadUpdateExifTool();
+        if (!success || exifToolExe == null)
+            throw new InvalidOperationException("ExifTool executable not found or could not be downloaded.");
+
+        var request = new ExifToolWriteRequest
+        {
+            Rating = rating
+        };
+
+        var file = new FileInfo(filePath);
+        var result = await ExifToolWriter.WriteMetadataAsync(exifToolExe, request, new[] { file });
+
+        if (!result.Success)
+            throw new InvalidOperationException(string.Join("; ", result.Errors));
+    }
+
+    private class PreviewCacheEntry
+    {
+        public required string DisplayTitle { get; init; }
+        public BitmapSource? EdgeOverlayImage { get; init; }
+        public required string FullFilePath { get; init; }
+        public BitmapSource? HistogramImage { get; init; }
+        public long LastAccessedTicks { get; set; } = Environment.TickCount64;
+        public string MetadataOverlayText { get; init; } = string.Empty;
+        public BitmapSource? PreviewImage { get; init; }
+    }
 }

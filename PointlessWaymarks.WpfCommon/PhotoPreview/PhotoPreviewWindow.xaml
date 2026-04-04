@@ -13,10 +13,11 @@
         d:DataContext="{d:DesignInstance local:PhotoPreviewWindow}"
         mc:Ignorable="d">
     <Window.InputBindings>
-        <KeyBinding Key="Left" Command="{Binding PreviewContext.PreviousItemMessageCommand}" />
-        <KeyBinding Key="Right" Command="{Binding PreviewContext.NextItemMessageCommand}" />
+        <KeyBinding Key="K" Command="{Binding PreviewContext.PreviousItemMessageCommand}" />
+        <KeyBinding Key="J" Command="{Binding PreviewContext.NextItemMessageCommand}" />
         <KeyBinding Key="S" Command="{Binding PreviewContext.ToggleSharpnessCommand}" />
         <KeyBinding Key="H" Command="{Binding PreviewContext.ToggleHistogramCommand}" />
+        <KeyBinding Key="M" Command="{Binding PreviewContext.ToggleMetadataOverlayCommand}" />
         <KeyBinding Key="D0" Command="{Binding PreviewContext.SetRating0Command}" />
         <KeyBinding Key="D1" Command="{Binding PreviewContext.SetRating1Command}" />
         <KeyBinding Key="D2" Command="{Binding PreviewContext.SetRating2Command}" />
@@ -34,8 +35,8 @@
         <!-- Toolbar -->
         <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="0,0,0,1" Padding="6,4">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Padding="8,4" Margin="2" Width="100" Command="{Binding PreviewContext.PreviousItemMessageCommand}" ToolTip="Previous Item (Left Arrow)">&#x25C0; Previous</Button>
-                <Button Padding="8,4" Margin="2" Width="100" Command="{Binding PreviewContext.NextItemMessageCommand}" ToolTip="Next Item (Right Arrow)">Next &#x25B6;</Button>
+                <Button Padding="8,4" Margin="2" Width="100" Command="{Binding PreviewContext.PreviousItemMessageCommand}" ToolTip="Previous Item (K)">&#x25C0; Previous</Button>
+                <Button Padding="8,4" Margin="2" Width="100" Command="{Binding PreviewContext.NextItemMessageCommand}" ToolTip="Next Item (J)">Next &#x25B6;</Button>
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <Button Padding="8,4" Margin="2" Click="ZoomIn_OnClick" ToolTip="Zoom In">&#x1F50D;+</Button>
                 <Button Padding="8,4" Margin="2" Click="ZoomOut_OnClick" ToolTip="Zoom Out">&#x1F50D;&#x2212;</Button>
@@ -50,6 +51,9 @@
                 <CheckBox VerticalAlignment="Center" Margin="8,0"
                           IsChecked="{Binding PreviewContext.ShowHistogram}"
                           Content="Histogram (H)" ToolTip="Toggle Histogram (H)" />
+                <CheckBox VerticalAlignment="Center" Margin="8,0"
+                          IsChecked="{Binding PreviewContext.ShowMetadataOverlay}"
+                          Content="Metadata (M)" ToolTip="Toggle Metadata Overlay (M)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <starRating:StarRatingControl Rating="{Binding PreviewContext.Rating}" VerticalAlignment="Center" Margin="8,0" ToolTip="Rating (0-5)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
@@ -104,7 +108,10 @@
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
                       Background="#1E1E1E"
-                      PreviewMouseWheel="ImageScrollViewer_OnPreviewMouseWheel">
+                      PreviewMouseWheel="ImageScrollViewer_OnPreviewMouseWheel"
+                      PreviewMouseLeftButtonDown="ImageScrollViewer_OnPreviewMouseLeftButtonDown"
+                      PreviewMouseMove="ImageScrollViewer_OnPreviewMouseMove"
+                      PreviewMouseLeftButtonUp="ImageScrollViewer_OnPreviewMouseLeftButtonUp">
             <Grid x:Name="ImageContainer"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center">
@@ -122,7 +129,7 @@
 
                 <!-- Edge Overlay (shown on top when enabled) -->
                 <Image Source="{Binding PreviewContext.EdgeOverlayImage}"
-                       Stretch="None"
+                       Stretch="Fill"
                        RenderOptions.BitmapScalingMode="HighQuality"
                        IsHitTestVisible="False">
                     <Image.Style>
@@ -139,6 +146,33 @@
             </Grid>
         </ScrollViewer>
 
+        <!-- Metadata Overlay (upper right of image area) -->
+        <Border Grid.Row="1"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="12"
+                Padding="10,8"
+                Background="#AA000000"
+                CornerRadius="4"
+                IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding PreviewContext.ShowMetadataOverlay}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding PreviewContext.MetadataOverlayText}"
+                       Foreground="White"
+                       FontSize="12"
+                       FontFamily="Segoe UI"
+                       Opacity="0.9"
+                       TextAlignment="Right" />
+        </Border>
+
         <!-- Floating Previous/Next Buttons -->
         <Button Grid.Row="1"
                 HorizontalAlignment="Left"
@@ -148,7 +182,7 @@
                 FontSize="20"
                 Padding="6,12"
                 Command="{Binding PreviewContext.PreviousItemMessageCommand}"
-                ToolTip="Previous Item (Left Arrow)">&#x25C0;</Button>
+                ToolTip="Previous Item (K)">&#x25C0;</Button>
         <Button Grid.Row="1"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
@@ -157,18 +191,17 @@
                 FontSize="20"
                 Padding="6,12"
                 Command="{Binding PreviewContext.NextItemMessageCommand}"
-                ToolTip="Next Item (Right Arrow)">&#x25B6;</Button>
-
-        <status:StatusControl
-            Grid.Row="0"
-            Grid.RowSpan="2"
-            d:IsHidden="true"
-            DataContext="{Binding StatusContext}" />
+                ToolTip="Next Item (J)">&#x25B6;</Button>
         <windowScreenShot:WindowScreenShotControl
             Margin="2,2,2,6"
             Grid.Row="0"
             Grid.RowSpan="2"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom" />
+        <status:StatusControl
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            d:IsHidden="true"
+            DataContext="{Binding StatusContext}" />
     </Grid>
 </Window>

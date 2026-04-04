@@ -14,7 +14,6 @@ public class ExifToolWriteRequest
     ///     Altitude in meters (will be written as GPSAltitude).
     /// </summary>
     public double? AltitudeInMeters { get; set; }
-
     public string? Copyright { get; set; }
     public string? Creator { get; set; }
     public string? Description { get; set; }
@@ -22,6 +21,7 @@ public class ExifToolWriteRequest
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? Title { get; set; }
+    public int? Rating { get; set; }
 }
 
 /// <summary>
@@ -46,7 +46,7 @@ public static class ExifToolWriter
     /// </summary>
     public static List<string> BuildArguments(ExifToolWriteRequest request, FileInfo file)
     {
-        var args = new List<string> { "-overwrite_original", "-charset", "iptc=utf8" };
+        var args = new List<string> { "-m", "-overwrite_original", "-charset", "iptc=utf8" };
 
         if (request.Title is not null)
         {
@@ -67,6 +67,12 @@ public static class ExifToolWriter
             args.Add($"-Artist={request.Creator}");
             args.Add($"-XMP-dc:Creator={request.Creator}");
             args.Add($"-IPTC:By-line={request.Creator}");
+        }
+
+        if (request.Rating is >= 0 and <= 5)
+        {
+            args.Add($"-Rating={request.Rating}");
+            args.Add($"-XMP:Rating={request.Rating}");
         }
 
         if (request.Copyright is not null)
