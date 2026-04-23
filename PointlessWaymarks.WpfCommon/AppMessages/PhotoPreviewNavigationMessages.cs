@@ -28,3 +28,9 @@ public record PhotoItemRatingChangedData(string FullFilePath, int Rating);
 /// </summary>
 public class PhotoPreviewFilterUnratedMessage(bool filterUnratedOnly)
     : ValueChangedMessage<bool>(filterUnratedOnly);
+
+/// <summary>
+///     Sent by the host to tell the Photo Preview Window that there is
+///     nothing to preview (e.g. the list is empty or has no visible items).
+/// </summary>
+public class PhotoPreviewClearMessage() : ValueChangedMessage<object>(new());

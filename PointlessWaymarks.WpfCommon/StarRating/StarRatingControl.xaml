@@ -3,7 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:starRating="clr-namespace:PointlessWaymarks.WpfCommon.StarRating"
              mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance starRating:StarRatingContext}"
              d:DesignHeight="24" d:DesignWidth="120">
     <UserControl.Resources>
         <Style x:Key="StarButtonStyle" TargetType="Button">

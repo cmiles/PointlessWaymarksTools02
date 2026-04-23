@@ -5,13 +5,18 @@ namespace PointlessWaymarks.VisualWebWork;
 
 public static class PlaywrightScreenShot
 {
+    // Selectors for elements that should always be hidden (e.g. injected toolbars from archiving services)
+    private static readonly List<string> AlwaysHideSelectors = ["#wm-ipp-base"];
+
     private static bool _playwrightInitialized;
 
     public static async Task<ScreenshotResult> CaptureHtmlScreenshot(string htmlContent, IProgress<string>? progress,
-        int browserWidth = 1920, int? maxHeight = null)
+        int browserWidth = 1920, int? maxHeight = null, CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             await EnsurePlaywrightInitialized();
 
             progress?.Report("Initializing Playwright");
@@ -21,6 +26,8 @@ public static class PlaywrightScreenShot
             {
                 Headless = true
             });
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress?.Report("Opening page");
             var page = await browser.NewPageAsync();
@@ -32,7 +39,11 @@ public static class PlaywrightScreenShot
             await page.SetContentAsync(htmlContent);
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-            return await CapturePageScreenshot(page, progress, browserWidth, maxHeight);
+            return await CapturePageScreenshot(page, progress, browserWidth, maxHeight, cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return ScreenshotResult.CreateError("Screenshot capture was cancelled.");
         }
         catch (Exception ex)
         {
@@ -42,10 +53,12 @@ public static class PlaywrightScreenShot
 
     private static async Task<ScreenshotResult> CapturePageScreenshot(IPage page,
         IProgress<string>? progress, int browserWidth = 1920, int? maxHeight = null,
-        List<string>? hideElementSelectors = null)
+        List<string>? hideElementSelectors = null, CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             progress?.Report("Preparing page for screenshot");
 
             // Turn off overflow to prevent scrollbars
@@ -54,13 +67,18 @@ public static class PlaywrightScreenShot
             document.querySelector('body').style.overflow='hidden';
         ");
 
+            // Merge always-hide selectors with any caller-supplied ones
+            var allHideSelectors = AlwaysHideSelectors
+                .Concat(hideElementSelectors ?? [])
+                .Distinct()
+                .ToList();
 
             // Hide elements that match the provided selectors
-            if (hideElementSelectors != null && hideElementSelectors.Any())
+            if (allHideSelectors.Count > 0)
             {
-                progress?.Report($"Hiding {hideElementSelectors.Count} elements based on provided selectors");
+                progress?.Report($"Hiding {allHideSelectors.Count} elements based on provided selectors");
 
-                foreach (var selector in hideElementSelectors)
+                foreach (var selector in allHideSelectors)
                     try
                     {
                         // Hide all elements matching the selector (no state preservation)
@@ -140,9 +158,12 @@ public static class PlaywrightScreenShot
             var rowIndex = 0;
             var accumulatedHeight = 0;
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Continue scrolling and capturing until we reach the end of the page or maxHeight
             while (!isEndOfPage && (!maxHeight.HasValue || accumulatedHeight < maxHeight.Value))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 await page.EvaluateAsync("""
 
                                                  var elements = document.querySelectorAll('*');
@@ -185,7 +206,9 @@ public static class PlaywrightScreenShot
                         rowScrollPositions[rowIndex - 1] = actualScrollPosition;
 
                     // Wait for any dynamic content to settle
-                    await Task.Delay(1000);
+                    await Task.Delay(1000, cancellationToken);
+
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     // Capture the current viewport
                     var screenshot = await page.ScreenshotAsync(new PageScreenshotOptions
@@ -265,6 +288,8 @@ public static class PlaywrightScreenShot
 
             progress?.Report($"Finished capturing {rowIndex} rows with accumulated height of {accumulatedHeight}");
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Calculate the final height to ensure we don't exceed maxHeight
             var finalDocumentHeight =
                 maxHeight.HasValue ? Math.Min(accumulatedHeight, maxHeight.Value) : accumulatedHeight;
@@ -278,6 +303,7 @@ public static class PlaywrightScreenShot
 
             for (var i = 0; i < verticalImageBytesList.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report($"Final Image Assembly - Row {i + 1} of {verticalImageBytesList.Count}");
 
                 using var image = SKBitmap.Decode(verticalImageBytesList[i]);
@@ -331,6 +357,10 @@ public static class PlaywrightScreenShot
 
             return ScreenshotResult.CreateSuccess(finalImageBytes);
         }
+        catch (OperationCanceledException)
+        {
+            return ScreenshotResult.CreateError("Screenshot capture was cancelled.");
+        }
         catch (Exception ex)
         {
             return ScreenshotResult.CreateError($"Screenshot capture failed: {ex.Message}");
@@ -338,13 +368,18 @@ public static class PlaywrightScreenShot
     }
 
     public static async Task<ScreenshotResult> CaptureScreenshot(string url, IProgress<string>? progress,
-        int browserWidth = 1920, int? maxHeight = null, List<string>? hideElementSelectors = null)
+        int browserWidth = 1920, int? maxHeight = null, List<string>? hideElementSelectors = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             progress?.Report("Initializing Playwright");
 
             await EnsurePlaywrightInitialized();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress?.Report("Setting Up Playwright");
 
@@ -379,7 +414,13 @@ public static class PlaywrightScreenShot
                     $"Non-critical error while waiting for page to load: {ex.Message}. Continuing with screenshot.");
             }
 
-            return await CapturePageScreenshot(page, progress, browserWidth, maxHeight, hideElementSelectors);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return await CapturePageScreenshot(page, progress, browserWidth, maxHeight, hideElementSelectors, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return ScreenshotResult.CreateError("Screenshot capture was cancelled.");
         }
         catch (Exception ex)
         {

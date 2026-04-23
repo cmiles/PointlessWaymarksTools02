@@ -20,7 +20,7 @@ public partial class FileBasedGeoTaggerWindow
     public string WindowTitle { get; set; } = "File Based GeoTagger";
 
     public static async Task<FileBasedGeoTaggerWindow> CreateInstance(List<string>? initialFilesToTag = null,
-        bool closeAfterWrite = false)
+        bool closeAfterWrite = false, List<string>? initialGpxFiles = null)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
 
@@ -40,6 +40,12 @@ public partial class FileBasedGeoTaggerWindow
             statusContext.RunFireAndForgetNonBlockingTask(async () =>
             {
                 await context.FilesToTagFileList.AddFilesToTag(initialFilesToTag);
+            });
+
+        if (initialGpxFiles is { Count: > 0 } && context.GpxFileList != null)
+            statusContext.RunFireAndForgetNonBlockingTask(async () =>
+            {
+                await context.GpxFileList.AddFilesToTag(initialGpxFiles);
             });
 
         return window;

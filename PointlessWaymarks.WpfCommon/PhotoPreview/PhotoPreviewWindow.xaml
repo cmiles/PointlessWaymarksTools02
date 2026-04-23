@@ -12,6 +12,14 @@
         Height="750"
         d:DataContext="{d:DesignInstance local:PhotoPreviewWindow}"
         mc:Ignorable="d">
+    <Window.Resources>
+        <RoutedCommand x:Key="ZoomFitCommand" />
+        <RoutedCommand x:Key="ZoomActualCommand" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource ZoomFitCommand}" Executed="ZoomFit_OnClick" />
+        <CommandBinding Command="{StaticResource ZoomActualCommand}" Executed="ZoomActual_OnClick" />
+    </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="K" Command="{Binding PreviewContext.PreviousItemMessageCommand}" />
         <KeyBinding Key="J" Command="{Binding PreviewContext.NextItemMessageCommand}" />
@@ -26,6 +34,8 @@
         <KeyBinding Key="D4" Command="{Binding PreviewContext.SetRating4Command}" />
         <KeyBinding Key="D5" Command="{Binding PreviewContext.SetRating5Command}" />
         <KeyBinding Key="U" Command="{Binding PreviewContext.ToggleFilterUnratedCommand}" />
+        <KeyBinding Key="F" Command="{StaticResource ZoomFitCommand}" />
+        <KeyBinding Key="O" Command="{StaticResource ZoomActualCommand}" />
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
@@ -41,8 +51,8 @@
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <Button Padding="8,4" Margin="2" Click="ZoomIn_OnClick" ToolTip="Zoom In">&#x1F50D;+</Button>
                 <Button Padding="8,4" Margin="2" Click="ZoomOut_OnClick" ToolTip="Zoom Out">&#x1F50D;&#x2212;</Button>
-                <Button Padding="8,4" Margin="2" Click="ZoomFit_OnClick" ToolTip="Fit to Window">Fit</Button>
-                <Button Padding="8,4" Margin="2" Click="ZoomActual_OnClick" ToolTip="Actual Size (100%)">1:1</Button>
+                <Button Padding="8,4" Margin="2" Click="ZoomFit_OnClick" ToolTip="Fit to Window (F)">Fit</Button>
+                <Button Padding="8,4" Margin="2" Click="ZoomActual_OnClick" ToolTip="Actual Size 100% (O)">1:1</Button>
                 <TextBlock VerticalAlignment="Center" Margin="8,0,4,0" Text="Zoom:" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,12,0"
                            Text="{Binding PreviewContext.ZoomLevel, StringFormat='{}{0:P0}'}" />
@@ -59,7 +69,7 @@
                           IsChecked="{Binding PreviewContext.ShowMetadataOverlay}"
                           Content="Metadata (M)" ToolTip="Toggle Metadata Overlay (M)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
-                <starRating:StarRatingControl Rating="{Binding PreviewContext.Rating}" VerticalAlignment="Center" Margin="8,0" ToolTip="Rating (0-5)" />
+                <starRating:StarRatingControl DataContext="{Binding PreviewContext.RatingEntry}" VerticalAlignment="Center" Margin="8,0" ToolTip="Rating (0-5)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <CheckBox VerticalAlignment="Center" Margin="8,0"
                           IsChecked="{Binding PreviewContext.FilterUnratedOnly}"

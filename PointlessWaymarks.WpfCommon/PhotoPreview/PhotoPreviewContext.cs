@@ -12,6 +12,7 @@ using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.SpatialTools;
 using PointlessWaymarks.WpfCommon.AppMessages;
+using PointlessWaymarks.WpfCommon.StarRating;
 using PointlessWaymarks.WpfCommon.Status;
 using XmpCore;
 
@@ -30,7 +31,7 @@ public partial class PhotoPreviewContext
     private string? _lastTempFile;
     private CancellationTokenSource? _prefetchCts;
     private CancellationTokenSource? _previewCts;
-    private bool _suppressRatingPersist;
+    private bool _settingRatingInternally;
     public string CurrentFilePath { get; set; } = string.Empty;
     public string DisplayTitle { get; set; } = "Photo Preview";
     public BitmapSource? EdgeOverlayImage { get; set; }
@@ -40,13 +41,45 @@ public partial class PhotoPreviewContext
     public bool LockZoom { get; set; }
     public string MetadataOverlayText { get; set; } = string.Empty;
     public BitmapSource? PreviewImage { get; set; }
-    public int Rating { get; set; }
+    public StarRatingContext RatingEntry { get; set; } = StarRatingContext.CreateInstance();
     public bool ShowEdgeOverlay { get; set; }
     public bool ShowHistogram { get; set; } = true;
     public bool ShowMetadataOverlay { get; set; }
     public required StatusControlContext StatusContext { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
+    public bool WriteRatingToFile { get; set; } = true;
     public double ZoomLevel { get; set; } = 1.0;
+
+    /// <summary>
+    ///     Cleans up an aperture string to a consistent ƒ/X.X format.
+    ///     Ported from PhotoGenerator.ApertureCleanup.
+    /// </summary>
+    private static string ApertureCleanup(string? aperture)
+    {
+        if (string.IsNullOrWhiteSpace(aperture))
+            return string.Empty;
+
+        var apertureForCleaning = aperture.Trim();
+        if (apertureForCleaning.StartsWith("f/", StringComparison.OrdinalIgnoreCase) ||
+            apertureForCleaning.StartsWith("ƒ/", StringComparison.OrdinalIgnoreCase))
+            apertureForCleaning = apertureForCleaning.Substring(2);
+        else if (apertureForCleaning.StartsWith("f", StringComparison.OrdinalIgnoreCase) ||
+                 apertureForCleaning.StartsWith("ƒ", StringComparison.OrdinalIgnoreCase))
+            apertureForCleaning = apertureForCleaning.Substring(1);
+
+        if (decimal.TryParse(apertureForCleaning, out var apertureValue))
+        {
+            var cultureSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+            var apertureStringDecimal = apertureValue.ToString(CultureInfo.CurrentCulture);
+            apertureStringDecimal = apertureStringDecimal.Contains(cultureSeparator)
+                ? apertureStringDecimal.TrimEnd('0').TrimEnd(cultureSeparator.ToCharArray())
+                : apertureStringDecimal;
+
+            return $"ƒ/{apertureStringDecimal}";
+        }
+
+        return aperture.Trim();
+    }
 
     private static BitmapSource ApplyRotation(BitmapSource source, Rotation rotation)
     {
@@ -100,6 +133,7 @@ public partial class PhotoPreviewContext
 
         WeakReferenceMessenger.Default.Unregister<PhotoPreviewRequestMessage>(this);
         WeakReferenceMessenger.Default.Unregister<PhotoItemRatingChangedMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<PhotoPreviewClearMessage>(this);
         CleanupTempFile();
     }
 
@@ -120,13 +154,15 @@ public partial class PhotoPreviewContext
         }
     }
 
-    public static async Task<PhotoPreviewContext> CreateInstance(StatusControlContext? statusContext)
+    public static async Task<PhotoPreviewContext> CreateInstance(StatusControlContext? statusContext,
+        bool writeRatingToFile = true)
     {
         await ThreadSwitcher.ResumeBackgroundAsync();
 
         var context = new PhotoPreviewContext
         {
-            StatusContext = statusContext ?? await StatusControlContext.CreateInstance()
+            StatusContext = statusContext ?? await StatusControlContext.CreateInstance(),
+            WriteRatingToFile = writeRatingToFile
         };
 
         context.BuildCommands();
@@ -137,15 +173,21 @@ public partial class PhotoPreviewContext
         WeakReferenceMessenger.Default.Register<PhotoItemRatingChangedMessage>(context,
             (r, m) => ((PhotoPreviewContext)r).OnRatingChanged(m.Value));
 
+        WeakReferenceMessenger.Default.Register<PhotoPreviewClearMessage>(context,
+            (r, _) => ((PhotoPreviewContext)r).OnPreviewCleared());
+
         context.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(FilterUnratedOnly))
                 WeakReferenceMessenger.Default.Send(
                     new PhotoPreviewFilterUnratedMessage(context.FilterUnratedOnly));
+        };
 
-            if (e.PropertyName == nameof(Rating) && !context._suppressRatingPersist)
+        context.RatingEntry.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(StarRatingContext.UserValue) && !context._settingRatingInternally)
                 context.StatusContext.RunFireAndForgetNonBlockingTask(() =>
-                    context.PersistRating(context.Rating, context.CurrentFilePath));
+                    context.SetRatingInternal(context.RatingEntry.UserValue));
         };
 
         return context;
@@ -182,53 +224,6 @@ public partial class PhotoPreviewContext
                 .First();
             _previewCache.TryRemove(oldest.Key, out _);
         }
-    }
-
-    /// <summary>
-    ///     Cleans up an aperture string to a consistent ƒ/X.X format.
-    ///     Ported from PhotoGenerator.ApertureCleanup.
-    /// </summary>
-    private static string ApertureCleanup(string? aperture)
-    {
-        if (string.IsNullOrWhiteSpace(aperture))
-            return string.Empty;
-
-        var apertureForCleaning = aperture.Trim();
-        if (apertureForCleaning.StartsWith("f/", StringComparison.OrdinalIgnoreCase) ||
-            apertureForCleaning.StartsWith("ƒ/", StringComparison.OrdinalIgnoreCase))
-            apertureForCleaning = apertureForCleaning.Substring(2);
-        else if (apertureForCleaning.StartsWith("f", StringComparison.OrdinalIgnoreCase) ||
-                 apertureForCleaning.StartsWith("ƒ", StringComparison.OrdinalIgnoreCase))
-            apertureForCleaning = apertureForCleaning.Substring(1);
-
-        if (decimal.TryParse(apertureForCleaning, out var apertureValue))
-        {
-            var cultureSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-            var apertureStringDecimal = apertureValue.ToString(CultureInfo.CurrentCulture);
-            apertureStringDecimal = apertureStringDecimal.Contains(cultureSeparator)
-                ? apertureStringDecimal.TrimEnd('0').TrimEnd(cultureSeparator.ToCharArray())
-                : apertureStringDecimal;
-
-            return $"ƒ/{apertureStringDecimal}";
-        }
-
-        return aperture.Trim();
-    }
-
-    /// <summary>
-    ///     Converts a shutter speed APEX value to a human-readable string.
-    ///     Ported from ExifHelpers.ShutterSpeedToHumanReadableString.
-    /// </summary>
-    private static string ShutterSpeedToHumanReadableString(Rational? toProcess)
-    {
-        if (toProcess == null) return string.Empty;
-
-        if (toProcess.Value.Numerator < 0)
-            return Math.Round(Math.Pow(2, (double)-1 * toProcess.Value.Numerator / toProcess.Value.Denominator), 1)
-                .ToString("N1") + "s";
-
-        return
-            $"1/{Math.Round(Math.Pow(2, (double)toProcess.Value.Numerator / toProcess.Value.Denominator), 1):N0}s";
     }
 
     /// <summary>
@@ -299,15 +294,14 @@ public partial class PhotoPreviewContext
             // Aperture with cleanup
             var aperture = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagAperture)?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(aperture))
-                aperture = exifSubIfdDirectory?.GetDescription(ExifDirectoryBase.TagFNumber)?.Trim() ?? string.Empty;
+                aperture = exifSubIfdDirectory.GetDescription(ExifDirectoryBase.TagFNumber)?.Trim() ?? string.Empty;
             aperture = ApertureCleanup(aperture);
 
             // Shutter speed with proper formatting
             var shutterSpeed = string.Empty;
-            if (exifSubIfdDirectory?.TryGetRational(ExifDirectoryBase.TagShutterSpeed, out var shutterValue) ?? false)
+            if (exifSubIfdDirectory.TryGetRational(ExifDirectoryBase.TagShutterSpeed, out var shutterValue))
                 shutterSpeed = ShutterSpeedToHumanReadableString(shutterValue);
-            else if (exifSubIfdDirectory?.TryGetRational(ExifDirectoryBase.TagExposureTime, out var exposureValue) ??
-                     false)
+            else if (exifSubIfdDirectory.TryGetRational(ExifDirectoryBase.TagExposureTime, out var exposureValue))
                 shutterSpeed = ExposureTimeToHumanReadableString(exposureValue);
 
             // Build display string
@@ -928,12 +922,41 @@ public partial class PhotoPreviewContext
         WeakReferenceMessenger.Default.Send(new PhotoPreviewNextItemMessage());
     }
 
+    private void OnPreviewCleared()
+    {
+        lock (_ctsLock)
+        {
+            _previewCts?.Cancel();
+            _previewCts?.Dispose();
+            _previewCts = null;
+
+            _prefetchCts?.Cancel();
+            _prefetchCts?.Dispose();
+            _prefetchCts = null;
+        }
+
+        CurrentFilePath = string.Empty;
+        PreviewImage = null;
+        EdgeOverlayImage = null;
+        HistogramImage = null;
+        MetadataOverlayText = string.Empty;
+        DisplayTitle = "Photo Preview";
+        StatusMessage = string.Empty;
+        IsLoading = false;
+
+        _settingRatingInternally = true;
+        RatingEntry.UserValue = 0;
+        _settingRatingInternally = false;
+
+        CleanupTempFile();
+    }
+
     private void OnPreviewRequested(PhotoPreviewRequestData data)
     {
         CurrentFilePath = data.FullFilePath;
-        _suppressRatingPersist = true;
-        Rating = data.Rating;
-        _suppressRatingPersist = false;
+        _settingRatingInternally = true;
+        RatingEntry.UserValue = data.Rating;
+        _settingRatingInternally = false;
 
         // Cancel any in-progress generation and start a new one
         CancellationTokenSource newCts;
@@ -948,68 +971,52 @@ public partial class PhotoPreviewContext
         // Check if we have a cached preview for this file
         if (_previewCache.TryGetValue(data.FullFilePath, out var cached))
         {
-            cached.LastAccessedTicks = Environment.TickCount64;
-            StatusContext.RunBlockingTask(async () =>
+            // If the underlying file has been deleted/moved, remove the stale cache entry
+            // and fall through to GeneratePreview which handles missing files gracefully
+            if (!File.Exists(data.FullFilePath))
             {
-                await ThreadSwitcher.ResumeBackgroundAsync();
-                IsLoading = true;
+                _previewCache.TryRemove(data.FullFilePath, out _);
+            }
+            else
+            {
+                cached.LastAccessedTicks = Environment.TickCount64;
+                StatusContext.RunBlockingTask(async () =>
+                {
+                    await ThreadSwitcher.ResumeBackgroundAsync();
+                    IsLoading = true;
 
-                PreviewImage = cached.PreviewImage;
-                PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
-                HistogramImage = cached.HistogramImage;
-                EdgeOverlayImage = cached.EdgeOverlayImage;
-                MetadataOverlayText = cached.MetadataOverlayText;
-                DisplayTitle = cached.DisplayTitle;
-                StatusMessage = cached.FullFilePath;
+                    PreviewImage = cached.PreviewImage;
+                    PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
+                    HistogramImage = cached.HistogramImage;
+                    EdgeOverlayImage = cached.EdgeOverlayImage;
+                    MetadataOverlayText = cached.MetadataOverlayText;
+                    DisplayTitle = cached.DisplayTitle;
+                    StatusMessage = cached.FullFilePath;
 
-                IsLoading = false;
-                CleanupTempFile();
+                    IsLoading = false;
+                    CleanupTempFile();
 
-                PrefetchUpcoming(data.UpcomingFilePaths);
-            });
+                    PrefetchUpcoming(data.UpcomingFilePaths);
+                });
+                return;
+            }
         }
-        else
+
+        StatusContext.RunBlockingTask(async () =>
         {
-            StatusContext.RunBlockingTask(async () =>
-            {
-                await GeneratePreview(data.FullFilePath, data.DisplayTitle, newCts.Token);
+            await GeneratePreview(data.FullFilePath, data.DisplayTitle, newCts.Token);
 
-                PrefetchUpcoming(data.UpcomingFilePaths);
-            });
-        }
+            PrefetchUpcoming(data.UpcomingFilePaths);
+        });
     }
 
     private void OnRatingChanged(PhotoItemRatingChangedData data)
     {
         if (string.Equals(data.FullFilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
         {
-            _suppressRatingPersist = true;
-            Rating = data.Rating;
-            _suppressRatingPersist = false;
-        }
-    }
-
-    private async Task PersistRating(int rating, string filePath)
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-
-        if (!string.IsNullOrWhiteSpace(filePath))
-        {
-            try
-            {
-                await WriteRatingWithExifTool(filePath, rating);
-            }
-            catch (Exception ex)
-            {
-                await StatusContext.ToastError($"Failed to write rating to file: {ex.Message}");
-                return;
-            }
-
-            WeakReferenceMessenger.Default.Send(
-                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(filePath, rating)));
-
-            var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
-            await StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
+            _settingRatingInternally = true;
+            RatingEntry.UserValue = data.Rating;
+            _settingRatingInternally = false;
         }
     }
 
@@ -1076,57 +1083,67 @@ public partial class PhotoPreviewContext
         WeakReferenceMessenger.Default.Send(new PhotoPreviewPreviousItemMessage());
     }
 
-    [NonBlockingCommand]
-    public async Task SetRating0()
+    [BlockingCommand]
+    public async Task SetRating0() => await SetRatingInternal(0);
+
+    [BlockingCommand]
+    public async Task SetRating1() => await SetRatingInternal(1);
+
+    [BlockingCommand]
+    public async Task SetRating2() => await SetRatingInternal(2);
+
+    [BlockingCommand]
+    public async Task SetRating3() => await SetRatingInternal(3);
+
+    [BlockingCommand]
+    public async Task SetRating4() => await SetRatingInternal(4);
+
+    [BlockingCommand]
+    public async Task SetRating5() => await SetRatingInternal(5);
+
+    private async Task SetRatingInternal(int rating)
     {
         await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(0);
+
+        if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
+        if (rating == RatingEntry.UserValue) return;
+
+        _settingRatingInternally = true;
+        RatingEntry.UserValue = rating;
+        _settingRatingInternally = false;
+
+        if (WriteRatingToFile)
+            try
+            {
+                await WriteRatingWithExifTool(CurrentFilePath, rating);
+            }
+            catch (Exception ex)
+            {
+                _ = StatusContext.ToastError($"Failed to write rating to file: {ex.Message}");
+                return;
+            }
+
+        WeakReferenceMessenger.Default.Send(
+            new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating)));
+
+        var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
+        _ = StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
     }
 
-    [NonBlockingCommand]
-    public async Task SetRating1()
+    /// <summary>
+    ///     Converts a shutter speed APEX value to a human-readable string.
+    ///     Ported from ExifHelpers.ShutterSpeedToHumanReadableString.
+    /// </summary>
+    private static string ShutterSpeedToHumanReadableString(Rational? toProcess)
     {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(1);
-    }
+        if (toProcess == null) return string.Empty;
 
-    [NonBlockingCommand]
-    public async Task SetRating2()
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(2);
-    }
+        if (toProcess.Value.Numerator < 0)
+            return Math.Round(Math.Pow(2, (double)-1 * toProcess.Value.Numerator / toProcess.Value.Denominator), 1)
+                .ToString("N1") + "s";
 
-    [NonBlockingCommand]
-    public async Task SetRating3()
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(3);
-    }
-
-    [NonBlockingCommand]
-    public async Task SetRating4()
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(4);
-    }
-
-    [NonBlockingCommand]
-    public async Task SetRating5()
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-        SetRatingInternal(5);
-    }
-
-    private void SetRatingInternal(int rating)
-    {
-        if (rating == Rating) return;
-
-        _suppressRatingPersist = true;
-        Rating = rating;
-        _suppressRatingPersist = false;
-
-        StatusContext.RunFireAndForgetNonBlockingTask(() => PersistRating(rating, CurrentFilePath));
+        return
+            $"1/{Math.Round(Math.Pow(2, (double)toProcess.Value.Numerator / toProcess.Value.Denominator), 1):N0}s";
     }
 
     [NonBlockingCommand]

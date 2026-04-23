@@ -71,8 +71,7 @@ public partial class FileBasedGeoTaggerContext
         Debug.Assert(GpxFileList != null, nameof(GpxFileList) + " != null");
         Debug.Assert(FilesToTagFileList != null, nameof(FilesToTagFileList) + " != null");
 
-        if (GpxFileList.Files == null || !GpxFileList.Files.Any() || FilesToTagFileList.Files == null ||
-            !FilesToTagFileList.Files.Any())
+        if (GpxFileList.Files == null || !GpxFileList.Files.Any())
         {
             await StatusContext.ToastError("No GPX Files Selected?");
             return;

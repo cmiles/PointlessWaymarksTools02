@@ -5,10 +5,10 @@
     <LangVersion>13.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Jint" Version="4.7.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.1.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.1.0" />
+    <PackageReference Include="Jint" Version="4.8.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.2.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PointlessWaymarks.FeedReader\PointlessWaymarks.FeedReader.csproj" />

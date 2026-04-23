@@ -37,12 +37,12 @@ public partial class PhotoPreviewWindow
     ///     Creates a new instance — can be called from any thread.
     ///     Does not show the window; use PositionWindowAndShowOnUiThread().
     /// </summary>
-    public static async Task<PhotoPreviewWindow> CreateInstance()
+    public static async Task<PhotoPreviewWindow> CreateInstance(bool writeRatingToFile = true)
     {
         await ThreadSwitcher.ResumeForegroundAsync();
 
         var statusContext = await StatusControlContext.CreateInstance();
-        var factoryContext = await PhotoPreviewContext.CreateInstance(statusContext);
+        var factoryContext = await PhotoPreviewContext.CreateInstance(statusContext, writeRatingToFile);
 
         var window = new PhotoPreviewWindow
         {
@@ -158,10 +158,6 @@ public partial class PhotoPreviewWindow
     {
         if (e.PropertyName == nameof(PhotoPreviewContext.DisplayTitle))
             Dispatcher.InvokeAsync(() => WindowTitle = $"Photo Preview - {PreviewContext.DisplayTitle}");
-
-        // When loading starts and Lock Zoom is enabled, save the current scroll position
-        if (e.PropertyName == nameof(PhotoPreviewContext.IsLoading) && PreviewContext.IsLoading && PreviewContext.LockZoom)
-            Dispatcher.InvokeAsync(SaveScrollPosition);
     }
 
     private async void OpenFileInExplorer_OnClick(object sender, RoutedEventArgs e)
@@ -173,22 +169,32 @@ public partial class PhotoPreviewWindow
 
     private void OnPreviewImageLoaded(object? sender, EventArgs e)
     {
-        // Handle zoom/scroll on the UI thread after each new image loads
+        // This outer lambda runs at Normal priority (9), which is BEFORE the
+        // DataBind-priority (8) binding update for the new PreviewImage.
+        // That means the old image is still displayed, so we can capture its
+        // scroll state accurately.
         Dispatcher.InvokeAsync(() =>
         {
             if (PreviewContext.LockZoom && PreviewContext.PreviewImage != null)
             {
-                // Preserve current zoom level - it's already set in PreviewContext.ZoomLevel
-                // Force layout so the ScrollViewer recalculates extents with the current zoom
-                ImageScrollViewer.UpdateLayout();
+                // Capture scroll position and zoom while the old image is still laid out
+                SaveScrollPosition();
+                var savedZoom = PreviewContext.ZoomLevel;
 
-                // Restore scroll position from stored percentages
-                RestoreScrollPosition();
+                // Restore at Loaded priority (6) — after the image binding update
+                // (DataBind=8) and layout pass (Render=7) have completed.
+                Dispatcher.InvokeAsync(() =>
+                {
+                    PreviewContext.ZoomLevel = savedZoom;
+                    ImageScrollViewer.UpdateLayout();
+                    RestoreScrollPosition();
+                }, System.Windows.Threading.DispatcherPriority.Loaded);
             }
             else
             {
-                // Default behavior: fit to window
-                FitImageToWindow();
+                // Fit-to-window also needs to run after the new image has been laid out
+                Dispatcher.InvokeAsync(FitImageToWindow,
+                    System.Windows.Threading.DispatcherPriority.Loaded);
             }
         });
     }
