@@ -61,7 +61,7 @@
         <PackageReference Include="MathConverter" Version="3.0.0" />
         <PackageReference Include="MdXaml.Plugins" Version="1.27.0" />
         <PackageReference Include="MetadataExtractor" Version="2.9.3" />
-        <PackageReference Include="Metalama.Framework" Version="2026.0.21" />
+        <PackageReference Include="Metalama.Framework" Version="2026.0.22" />
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" />
         <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.2901" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />

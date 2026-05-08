@@ -168,26 +168,53 @@ public partial class PhotoPreviewContext
         context.BuildCommands();
 
         WeakReferenceMessenger.Default.Register<PhotoPreviewRequestMessage>(context,
-            (r, m) => ((PhotoPreviewContext)r).OnPreviewRequested(m.Value));
+            (r, m) =>
+            {
+                context.StatusContext.Progress($"Preview requested: {Path.GetFileName(m.Value.FullFilePath)}");
+                ((PhotoPreviewContext)r).OnPreviewRequested(m.Value);
+            });
 
         WeakReferenceMessenger.Default.Register<PhotoItemRatingChangedMessage>(context,
-            (r, m) => ((PhotoPreviewContext)r).OnRatingChanged(m.Value));
+            (r, m) =>
+            {
+                var ctx = (PhotoPreviewContext)r;
+                if (m.Value.SenderId.HasValue && m.Value.SenderId == ctx.StatusContext.StatusControlContextId)
+                {
+                    ctx.StatusContext.Progress(
+                        $"Rating changed message received from self — skipping: {Path.GetFileName(m.Value.FullFilePath)} → {m.Value.Rating}");
+                    return;
+                }
 
+                ctx.StatusContext.Progress(
+                    $"Rating changed message received: {Path.GetFileName(m.Value.FullFilePath)} → {m.Value.Rating}");
+                ctx.OnRatingChanged(m.Value);
+            });
         WeakReferenceMessenger.Default.Register<PhotoPreviewClearMessage>(context,
-            (r, _) => ((PhotoPreviewContext)r).OnPreviewCleared());
+            (r, _) =>
+            {
+                context.StatusContext.Progress("Preview clear message received.");
+                ((PhotoPreviewContext)r).OnPreviewCleared();
+            });
 
         context.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(FilterUnratedOnly))
+            {
+                context.StatusContext.Progress($"Filter unrated only changed to: {context.FilterUnratedOnly}");
                 WeakReferenceMessenger.Default.Send(
                     new PhotoPreviewFilterUnratedMessage(context.FilterUnratedOnly));
+            }
         };
 
         context.RatingEntry.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(StarRatingContext.UserValue) && !context._settingRatingInternally)
+            {
+                context.StatusContext.Progress(
+                    $"Rating entry changed to {context.RatingEntry.UserValue} — triggering write...");
                 context.StatusContext.RunFireAndForgetNonBlockingTask(() =>
                     context.SetRatingInternal(context.RatingEntry.UserValue));
+            }
         };
 
         return context;
@@ -245,10 +272,12 @@ public partial class PhotoPreviewContext
     ///     Extracts camera metadata (camera, lens, ISO, aperture, shutter speed) from a file.
     ///     Uses comprehensive extraction with XMP fallbacks, modeled after PhotoGenerator.PhotoMetadataFromFile.
     /// </summary>
-    private static string ExtractCameraMetadata(string fullFilePath)
+    private string ExtractCameraMetadata(string fullFilePath)
     {
         try
         {
+            StatusContext.Progress($"  Extracting Metadata for {fullFilePath}");
+
             var exifIfdDirectory = ImageMetadataReader.ReadMetadata(fullFilePath).OfType<ExifIfd0Directory>().ToList();
             var exifSubIfdDirectory = ImageMetadataReader.ReadMetadata(fullFilePath).OfType<ExifSubIfdDirectory>()
                 .ToList();
@@ -333,7 +362,7 @@ public partial class PhotoPreviewContext
         }
     }
 
-    private static async Task<PreviewCacheEntry?> GenerateCacheEntry(string fullFilePath,
+    private async Task<PreviewCacheEntry?> GenerateCacheEntry(string fullFilePath,
         CancellationToken cancellationToken)
     {
         var file = new FileInfo(fullFilePath);
@@ -1015,6 +1044,7 @@ public partial class PhotoPreviewContext
         if (string.Equals(data.FullFilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
         {
             _settingRatingInternally = true;
+            StatusContext.Progress($"Setting Rating to {data.Rating}");
             RatingEntry.UserValue = data.Rating;
             _settingRatingInternally = false;
         }
@@ -1108,11 +1138,21 @@ public partial class PhotoPreviewContext
         if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
         if (rating == RatingEntry.UserValue) return;
 
+        var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
+        StatusContext.Progress($"Setting rating {stars} ({rating}) on {Path.GetFileName(CurrentFilePath)}...");
+
         _settingRatingInternally = true;
         RatingEntry.UserValue = rating;
+        StatusContext.Progress($"Sending rating changed message for {Path.GetFileName(CurrentFilePath)}...");
+        _ = Task.Run(() => WeakReferenceMessenger.Default.Send(
+            new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating, StatusContext.StatusControlContextId))))
+            .ContinueWith(t => StatusContext.ToastError($"Error sending rating changed message: {t.Exception!.GetBaseException().Message}"),
+                TaskContinuationOptions.OnlyOnFaulted);
         _settingRatingInternally = false;
 
         if (WriteRatingToFile)
+        {
+            StatusContext.Progress($"Writing rating to file: {Path.GetFileName(CurrentFilePath)}...");
             try
             {
                 await WriteRatingWithExifTool(CurrentFilePath, rating);
@@ -1123,10 +1163,9 @@ public partial class PhotoPreviewContext
                 return;
             }
 
-        WeakReferenceMessenger.Default.Send(
-            new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating)));
+            StatusContext.Progress($"Rating written to file: {Path.GetFileName(CurrentFilePath)}");
+        }
 
-        var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
         _ = StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
     }
 
@@ -1180,11 +1219,14 @@ public partial class PhotoPreviewContext
         ShowEdgeOverlay = !ShowEdgeOverlay;
     }
 
-    private static async Task WriteRatingWithExifTool(string filePath, int rating)
+    private async Task WriteRatingWithExifTool(string filePath, int rating)
     {
+        StatusContext.Progress("Looking for ExifTool...");
         var (success, _, exifToolExe) = await FileLocationTools.FindDownloadUpdateExifTool();
         if (!success || exifToolExe == null)
             throw new InvalidOperationException("ExifTool executable not found or could not be downloaded.");
+
+        StatusContext.Progress($"ExifTool found at {exifToolExe.FullName}");
 
         var request = new ExifToolWriteRequest
         {
@@ -1192,10 +1234,14 @@ public partial class PhotoPreviewContext
         };
 
         var file = new FileInfo(filePath);
-        var result = await ExifToolWriter.WriteMetadataAsync(exifToolExe, request, new[] { file });
+        StatusContext.Progress($"Writing rating {rating} to {file.Name} via ExifTool...");
+        var result =
+            await ExifToolWriter.WriteMetadataAsync(exifToolExe, request, [file], StatusContext.ProgressTracker());
 
         if (!result.Success)
             throw new InvalidOperationException(string.Join("; ", result.Errors));
+
+        StatusContext.Progress($"ExifTool successfully wrote rating {rating} to {file.Name}");
     }
 
     private class PreviewCacheEntry

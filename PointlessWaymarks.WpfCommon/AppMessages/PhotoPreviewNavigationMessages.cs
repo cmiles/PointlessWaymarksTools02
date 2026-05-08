@@ -20,7 +20,7 @@ public class PhotoPreviewPreviousItemMessage() : ValueChangedMessage<object>(new
 public class PhotoItemRatingChangedMessage(PhotoItemRatingChangedData data)
     : ValueChangedMessage<PhotoItemRatingChangedData>(data);
 
-public record PhotoItemRatingChangedData(string FullFilePath, int Rating);
+public record PhotoItemRatingChangedData(string FullFilePath, int Rating, Guid? SenderId = null);
 
 /// <summary>
 ///     Sent by the Photo Preview Window to inform the host that the

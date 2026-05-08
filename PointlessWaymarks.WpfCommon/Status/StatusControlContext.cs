@@ -365,6 +365,23 @@ public partial class StatusControlContext
         }
     }
 
+    public void RunFireAndForgetNonBlockingAction(Action toRun)
+    {
+        try
+        {
+            IncrementNonBlockingTasks();
+            Task.Run(toRun);
+        }
+        catch (Exception e)
+        {
+            DecrementNonBlockingTasks();
+            _ = ToastError($"Error: {FirstNonSeeInnerMessage(e)}");
+
+            Log.Error(e, "RunFireAndForgetNonBlockingTask Exception - Status Context Id: {ContextId}",
+                StatusControlContextId);
+        }
+    }
+
     public void RunFireAndForgetWithToastOnError(Func<Task> toRun)
     {
         try
