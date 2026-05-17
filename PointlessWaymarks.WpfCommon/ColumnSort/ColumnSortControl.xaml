@@ -32,7 +32,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type columnSort:ColumnSortControlSortItem}">
-                    <Button Height="24" Margin="2">
+                    <Button Height="{Binding ButtonHeight, ElementName=UserControlXaml}" Margin="2">
                         <Button.InputBindings>
                             <MouseBinding
                                 Command="{Binding DataContext.ColumnSortToggleCommand, ElementName=UserControlXaml}"
