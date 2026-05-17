@@ -16,7 +16,6 @@
         <local:FeatureIntersectTaggerControl DataContext="{Binding FeatureIntersectTaggerContent}" />
         <status:StatusControl DataContext="{Binding StatusContext}" />
         <windowScreenShot:WindowScreenShotControl
-            Width="40"
             Margin="2"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom" />
