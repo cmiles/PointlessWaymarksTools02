@@ -20,9 +20,9 @@ public static class ObfuscationTools
     {
         //The basis for this code is: https://stackoverflow.com/questions/38795103/encrypt-string-in-net-core
 
-        if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key must have valid value.", nameof(key));
-
         if (string.IsNullOrEmpty(textToDecrypt)) return string.Empty;
+
+        if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key must have valid value.", nameof(key));
 
         var combined = Convert.FromBase64String(textToDecrypt);
         var buffer = new byte[combined.Length];
@@ -66,9 +66,9 @@ public static class ObfuscationTools
     {
         //The basis for this code is: https://stackoverflow.com/questions/38795103/encrypt-string-in-net-core
 
-        if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key must have valid value.", nameof(key));
-
         if (string.IsNullOrEmpty(textToEncrypt)) return string.Empty;
+
+        if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key must have valid value.", nameof(key));
 
         var buffer = Encoding.UTF8.GetBytes(textToEncrypt);
         var aesKey = new byte[24];
