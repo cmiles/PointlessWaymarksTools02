@@ -95,7 +95,6 @@ public partial class S3UploadsItem : ISelectedTextTracker
             uploadRequest.UploadProgressEvent += UploadRequestOnUploadProgressEvent;
 
             var fileTransferUtility = new TransferUtility(s3Client);
-            await fileTransferUtility.UploadAsync(uploadRequest);
 
             await Policy.Handle<Exception>()
                 .WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(2 * (retryAttempt + 1)),
