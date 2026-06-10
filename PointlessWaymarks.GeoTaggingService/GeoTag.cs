@@ -282,30 +282,34 @@ public class GeoTag
                 }
             }
 
-            if (FileMetadataTools.TagSharpSupportedExtensions.Contains(fileToWriteTo.Extension,
-                    StringComparer.OrdinalIgnoreCase))
-                if (File.Create(fileToWriteTo.FullName) is TagLib.Image.File tagSharpFile)
-                    try
-                    {
-                        tagSharpFile.ImageTag.Latitude = loopFile.Latitude;
-                        tagSharpFile.ImageTag.Longitude = loopFile.Longitude;
-                        if (loopFile.Elevation is not null) tagSharpFile.ImageTag.Altitude = loopFile.Elevation;
-                        tagSharpFile.Save();
-                        returnFileResults.Add(new GeoTagMetadataWrite(loopFile.FileName, true,
-                            "Wrote to File with TagSharp", loopFile.Source, loopFile.Latitude, loopFile.Longitude,
-                            loopFile.Elevation));
-                        progress?.Report("GeoTag - Wrote Metadata with TagSharp");
-                        continue;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error(e,
-                            $"Error Tagging {fileToWriteTo.FullName} with TagSharp - {loopFile.Latitude}, {loopFile.Longitude} - Elevation: {loopFile.Elevation}");
-                        returnFileResults.Add(new GeoTagMetadataWrite(fileToWriteTo.FullName, false,
-                            $"Trying to write {loopFile.Latitude}, {loopFile.Longitude} - Elevation: {loopFile.Elevation} with TagSharp resulted in an error - {e.Message}",
-                            loopFile.Source, loopFile.Latitude, loopFile.Longitude, loopFile.Elevation));
-                        continue;
-                    }
+            var useExifTool = exifTool.isPresent && FileMetadataTools.ExifToolWriteSupportedExtensions.Contains(
+                fileToWriteTo.Extension, StringComparer.OrdinalIgnoreCase);
+
+            if (!useExifTool)
+                if (FileMetadataTools.TagSharpSupportedExtensions.Contains(fileToWriteTo.Extension,
+                        StringComparer.OrdinalIgnoreCase))
+                    if (File.Create(fileToWriteTo.FullName) is TagLib.Image.File tagSharpFile)
+                        try
+                        {
+                            tagSharpFile.ImageTag.Latitude = loopFile.Latitude;
+                            tagSharpFile.ImageTag.Longitude = loopFile.Longitude;
+                            if (loopFile.Elevation is not null) tagSharpFile.ImageTag.Altitude = loopFile.Elevation;
+                            tagSharpFile.Save();
+                            returnFileResults.Add(new GeoTagMetadataWrite(loopFile.FileName, true,
+                                "Wrote to File with TagSharp", loopFile.Source, loopFile.Latitude, loopFile.Longitude,
+                                loopFile.Elevation));
+                            progress?.Report("GeoTag - Wrote Metadata with TagSharp");
+                            continue;
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e,
+                                $"Error Tagging {fileToWriteTo.FullName} with TagSharp - {loopFile.Latitude}, {loopFile.Longitude} - Elevation: {loopFile.Elevation}");
+                            returnFileResults.Add(new GeoTagMetadataWrite(fileToWriteTo.FullName, false,
+                                $"Trying to write {loopFile.Latitude}, {loopFile.Longitude} - Elevation: {loopFile.Elevation} with TagSharp resulted in an error - {e.Message}",
+                                loopFile.Source, loopFile.Latitude, loopFile.Longitude, loopFile.Elevation));
+                            continue;
+                        }
 
             var writeRequest = new ExifToolWriteRequest
             {
