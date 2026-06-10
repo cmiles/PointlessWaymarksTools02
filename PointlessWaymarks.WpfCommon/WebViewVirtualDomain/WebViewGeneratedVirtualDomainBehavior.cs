@@ -460,7 +460,8 @@ public class WebViewGeneratedVirtualDomainBehavior : Behavior<WebView2Compositio
                 return;
             }
 
-            if (RedirectExternalLinksToBrowser && !navigationUri.Host.StartsWith(_virtualDomain))
+            if (RedirectExternalLinksToBrowser && !e.Uri.Replace("https://", "").Replace("http://", "")
+                    .StartsWith(_virtualDomain, StringComparison.OrdinalIgnoreCase))
             {
                 e.Cancel = true;
                 ProcessHelpers.OpenUrlInExternalBrowser(e.Uri);
