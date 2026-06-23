@@ -13,6 +13,7 @@
         d:DataContext="{d:DesignInstance local:PhotoPreviewWindow}"
         mc:Ignorable="d">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <RoutedCommand x:Key="ZoomFitCommand" />
         <RoutedCommand x:Key="ZoomActualCommand" />
     </Window.Resources>
@@ -212,6 +213,29 @@
             Grid.RowSpan="2"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom" />
+
+        <ItemsControl Grid.Row="1"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      Margin="12"
+                      ItemsSource="{Binding PreviewContext.RatingNotifications}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type local:RatingChangeNotification}">
+                    <Border Background="#AA000000" CornerRadius="4" Margin="0,0,0,8" Padding="10,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Message}" Foreground="White" VerticalAlignment="Center" />
+                            <Button Margin="8,0,0,0"
+                                    Content="X"
+                                    Command="{Binding DismissCommand}"
+                                    Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Background="Transparent" Foreground="White" BorderThickness="0"
+                                    FontWeight="Bold" Cursor="Hand" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
         <status:StatusControl
             Grid.Row="0"
             Grid.RowSpan="2"
