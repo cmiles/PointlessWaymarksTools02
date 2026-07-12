@@ -62,7 +62,7 @@
         <PackageReference Include="MdXaml.Plugins" Version="1.27.0" />
         <PackageReference Include="MetadataExtractor" Version="2.9.3" />
         <PackageReference Include="Metalama.Framework" Version="2026.1.19" />
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
         <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.2901" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
         <PackageReference Include="NetTopologySuite.Features" Version="2.2.0" />
