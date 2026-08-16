@@ -44,6 +44,8 @@ public partial class FeatureIntersectTaggerContext
                                                  
                                                  This program can use the [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) to look for feature intersections and/or areas and features that your files are 'in'. In both cases the tags are determined by the OSM Name Tag. If you want to see what data the API returns I would recommend trying [overpass turbo](https://overpass-turbo.eu/).
                                                  
+                                                 For the best features and performance consider running your own instance of the Overpass API. I've found that between rate limiting, downtime and not allowing 'in' queries public Overpass APIs can be challenging to use for automated requests like this program makes. To create your own Overpass API server try asking an LLM something like "Give me instructions for setting up a Docker Overpass API instance that allows duplicate requests and the use of 'in' queries. I'm mainly interested in the Continental USA."
+                                                 
                                                  ### Feature Intersect Tagging
                                                  
                                                  Feature Intersect Tagging is a great way to pick up the names of trails, roads, rivers and peaks. It is unlikely in most cases to pick up features that cover large areas like a National Park. This can be a nice compliment to the PAD-US data that is a very good source in the US for land ownership and management data.
@@ -63,7 +65,7 @@ public partial class FeatureIntersectTaggerContext
                                                  
                                                  ### Limitations
                                                  
-                                                 By default this program uses a public instance of the Overpass API - this is easy and convenient but means that the program must be careful about how many requests are submitted to the API and how much data is returned. With that in mind there are some limitations:
+                                                 This program can use one of the public instance of the Overpass API - this is easy and convenient but means that the program must be careful about how many requests are submitted to the API and how much data is returned. With that in mind there are some limitations:
                                                   - Feature Intersect Tagging will not pick up large areas like a national park
                                                   - 'In' Tagging can't be run for every point on a line or shape in a GeoJson file - this program just take a few representative points and runs those - while Open Street Map may have much of the same data that the PAD-US data it is only possible to query 'points' and something like a GPX Track may be more accurately tagged via the PAD-US data and/or GeoJson Feature Files.
                                                  """;
@@ -86,21 +88,14 @@ public partial class FeatureIntersectTaggerContext
                                                  """;
 
     public string PadUsOverviewMarkdown => """
-                                           From the [USGS PAD-US Data Overview](https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-overview):
+                                            From the [USGS PAD-US Data Overview](https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-overview):
 
                                            > PAD-US is America's official national inventory of U.S. terrestrial and marine protected areas that are dedicated to the preservation of biological diversity and to other natural, recreation and cultural uses, managed for these purposes through legal or other effective means. PAD-US also includes the best available aggregation of federal land and marine areas provided directly by managing agencies, coordinated through the Federal Geographic Data Committee Federal Lands Working Group.
 
                                            The Protected Areas Database is likely the best single source for land ownership and management information for the US Landscape and forms an excellent basis for automatically generating landscape oriented tags.
 
                                            The large size of the PAD-US data is a challenge to using it efficiently. You can download State or Region files from PAD-US and enter them like you would any other GeoJson file in the next tab - but this program can use the PAD-US somewhat more efficiently if you take some time and download, setup and specifically configure the PAD-US data:
-                                             - Create a directory dedicated to the PAD-US data - place on the Region Boundaries GeoJson file and Region GeoJson files in this directory. Enter the directory in this screen.
-                                             - On the [U.S. Department of the Interior Unified Interior Regional Boundaries](https://www.doi.gov/employees/reorg/unified-regional-boundaries) site find and click the 'shapefiles (for mapping software)' link - this will download a zip file.
-                                                 - Extract the contents of the zip file. 
-                                                 - Use ogr2ogr (see the general help for information on this command-line program) to convert the data to GeoJson (rough template: \ogr2ogr.exe -f GeoJSON -t_srs crs:84 {path and name for destination GeoJson file} {path and name of the shapefile to convert}). 
-                                                 - Put the GeoJson output file into your PAD-US data directory
-                                             - [PAD-US 3.0 Download data by Department of the Interior (DOI) Region GeoJSON - ScienceBase-Catalog](https://www.sciencebase.gov/catalog/item/622256afd34ee0c6b38b6bb7) - from this page click the 'Download data by Department of the Interior (DOI) Region GeoJSON' link, this will take you to a page where you can download any regions you are interested in. For each region:
-                                               - Extract the zip file and place the GeoJson file in your PAD-US data directory
-                                               - Ensure that the GeoJson has the expected coordinate reference system and format - for example  \ogr2ogr.exe -f GeoJSON -t_srs crs:84 C:\PointlessWaymarksPadUs\PADUS3_0Combined_Region1.geojson C:\PointlessWaymarksPadUs\PADUS3_0Combined_Region1.json.
+                                             - Create a directory dedicated to the PAD-US data and enter the directory in this screen. Download and unzip the states you are interested inside this directory (PowerShell command to unzip all files in a directory: gci *.zip | % { Expand-Archive $_.FullName $_.BaseName -Force }.
                                            """;
 
     public string PadUsAttributeToAdd { get; set; } = string.Empty;
