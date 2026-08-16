@@ -278,7 +278,27 @@ function generateBaseMaps(calTopoApiKey){
         tileLayers.push(calTopoHistoricTwo);
         layerNames["CalTopo - H2"] = calTopoHistoricTwo;
     }
+    
+    let usgsHistoricalDynamic = L.esri.imageMapLayer({
+        url: 'https://historical1.arcgis.com/arcgis/rest/services/USGS_Historical_Topographic_Maps/ImageServer',
+        attribution: 'USGS Historical Topo',
+        opacity: 1.0,
+        maxZoom: 20,
+        id: 'usgsHistoricalDynamic'
+    });
+    tileLayers.push(usgsHistoricalDynamic);
+    layerNames["USGS - Historical Quads"] = usgsHistoricalDynamic;
 
+    let usgsScannedQuads = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'USGS, Esri',
+        minZoom: 3,
+        maxNativeZoom: 15,
+        maxZoom: 20,
+        id: 'usgsScannedQuads'
+    });
+    tileLayers.push(usgsScannedQuads);
+    layerNames["USGS - Scanned Topo Quads"] = usgsScannedQuads;
+    
     let openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxNativeZoom: 17,
         maxZoom: 24,

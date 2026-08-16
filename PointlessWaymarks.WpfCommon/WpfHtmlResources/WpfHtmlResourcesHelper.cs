@@ -61,22 +61,27 @@ public static class WpfHtmlResourcesHelper
 
     public static string LocalMapCommonJs()
     {
-        return ReadEmbeddedText("localMapCommon.js");
+        return ReadEmbeddedText(".localMapCommon.js");
     }
 
     public static string LeafletJs()
     {
-        return ReadEmbeddedText("leaflet.js");
+        return ReadEmbeddedText(".leaflet.js");
     }
 
     public static string LeafletCss()
     {
-        return ReadEmbeddedText("leaflet.css");
+        return ReadEmbeddedText(".leaflet.css");
     }
 
     public static string ChartJs()
     {
-        return ReadEmbeddedText("chart.umd.min.js");
+        return ReadEmbeddedText(".chart.umd.min.js");
+    }
+    
+    public static string ErsiLeafletJs()
+    {
+        return ReadEmbeddedText(".esri-leaflet.js");
     }
 
     public static List<FileBuilderCreate> LeafletImages()

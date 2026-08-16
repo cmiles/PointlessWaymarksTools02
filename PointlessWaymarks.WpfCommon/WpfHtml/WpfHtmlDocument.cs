@@ -23,6 +23,7 @@ public static class WpfHtmlDocument
                              <title>{{HtmlEncoder.Default.Encode(title)}}</title>
                              <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.css" />
                              <script src="https://[[VirtualDomain]]/leaflet.js"></script>
+                             <script src="https://[[VirtualDomain]]/esri-leaflet.js"></script>
                              <script src="https://[[VirtualDomain]]/chart.umd.min.js"></script>
                                              <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.css" />
                              <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
@@ -52,6 +53,8 @@ public static class WpfHtmlDocument
             WpfHtmlResourcesHelper.LeafletCss()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("leaflet.js",
             WpfHtmlResourcesHelper.LeafletJs()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("esri-leaflet.js",
+            WpfHtmlResourcesHelper.ErsiLeafletJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("chart.umd.min.js",
             WpfHtmlResourcesHelper.ChartJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
@@ -79,6 +82,7 @@ public static class WpfHtmlDocument
                              <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.css" />
                              <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.css">
                              <script src="https://[[VirtualDomain]]/leaflet.js"></script>
+                             <script src="https://[[VirtualDomain]]/esri-leaflet.js"></script>
                              <script src="https://[[VirtualDomain]]/chart.umd.min.js"></script>
                              <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
                                              <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
@@ -102,6 +106,8 @@ public static class WpfHtmlDocument
             WpfHtmlResourcesHelper.LeafletCss()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("leaflet.js",
             WpfHtmlResourcesHelper.LeafletJs()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("esri-leaflet.js",
+            WpfHtmlResourcesHelper.ErsiLeafletJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("chart.umd.min.js",
             WpfHtmlResourcesHelper.ChartJs()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
