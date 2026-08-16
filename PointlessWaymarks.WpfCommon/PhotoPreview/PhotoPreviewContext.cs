@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using MetadataExtractor;
@@ -1139,6 +1140,10 @@ public partial class PhotoPreviewContext
         var notification = RatingChangeNotification.CreateInstance(this, $"Setting Rating {stars} - {fileName}");
 
         RatingNotifications.Add(notification);
+
+        // Let the just-added notification paint before the background rating
+        // write floods the dispatcher with Normal-priority Progress() updates.
+        StatusContext.ContextDispatcher.Invoke(() => { }, DispatcherPriority.Render);
 
         StatusContext.RunNonBlockingAction(async void () => await SetRatingInternal(rating, stars, fileName, notification));
     }
