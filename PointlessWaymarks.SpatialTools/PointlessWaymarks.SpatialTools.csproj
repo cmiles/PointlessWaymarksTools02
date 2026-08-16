@@ -22,4 +22,13 @@
     <ProjectReference Include="..\PointlessWaymarks.CommonTools\PointlessWaymarks.CommonTools.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="StateCountyServiceModels\cb_2025_us_county_5m.geojson">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="StateCountyServiceModels\OfflineDataNotes.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
