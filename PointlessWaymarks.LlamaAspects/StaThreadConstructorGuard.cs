@@ -8,7 +8,7 @@ public class StaThreadConstructorGuard : TypeAspect
 {
     public override void BuildAspect(IAspectBuilder<INamedType> builder)
     {
-        builder.Advice.AddInitializer(builder.Target, nameof(this.BeforeInstanceConstructor), InitializerKind.BeforeInstanceConstructor);
+        builder.AddInitializer(nameof(this.BeforeInstanceConstructor), InitializerKind.BeforeInstanceConstructor);
     }
 
     [Template]
