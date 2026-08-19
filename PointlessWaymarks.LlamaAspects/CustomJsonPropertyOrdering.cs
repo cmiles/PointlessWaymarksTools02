@@ -36,7 +36,7 @@ public class JsonAlphabeticalPropertyOrdering : TypeAspect
 
         foreach (var loopProperty in unassignedProperties)
         {
-            builder.Advice.IntroduceAttribute(loopProperty, AttributeConstruction.Create(
+            builder.With(loopProperty).IntroduceAttribute(AttributeConstruction.Create(
                 typeof(JsonPropertyOrderAttribute), [++currentOrder]));
         }
     }

@@ -8,12 +8,12 @@ public class NotifyPropertyChangedAttribute : TypeAspect
 {
     public override void BuildAspect(IAspectBuilder<INamedType> builder)
     {
-        builder.Advice.ImplementInterface(builder.Target, typeof(INotifyPropertyChanged), OverrideStrategy.Ignore);
+        builder.ImplementInterface(typeof(INotifyPropertyChanged), OverrideStrategy.Ignore);
 
         foreach (var property in builder.Target.Properties.Where(p =>
                      p is { IsAbstract: false, Writeability: Writeability.All } &&
                      !p.Attributes.Any(typeof(DoNotGenerateInpc))))
-            builder.Advice.OverrideAccessors(property, null, nameof(OverridePropertySetter));
+            builder.With(property).OverrideAccessors(null, nameof(OverridePropertySetter));
     }
 
     [Introduce(WhenExists = OverrideStrategy.Ignore)]
