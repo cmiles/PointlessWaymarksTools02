@@ -211,7 +211,7 @@ public static class WebViewToJpg
                     stream);
                 var imageBytes = stream.ToArray();
 
-                using var image = SKBitmap.Decode(imageBytes);
+                using var image = SKImage.FromEncodedData(imageBytes);
 
                 var sourceRect = new SKRect(0, 0, image.Width, image.Height);
                 var destRect = new SKRect(currentWidth, 0, currentWidth + image.Width, image.Height);
@@ -236,7 +236,7 @@ public static class WebViewToJpg
                     currentWidth += image.Width;
                 }
 
-                rowCanvas.DrawBitmap(image, sourceRect, destRect);
+                rowCanvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
             }
 
             progress?.Report($"Row {rowIndex} - Encoding Image");
@@ -302,14 +302,14 @@ public static class WebViewToJpg
         {
             progress?.Report($"Final Image Assembly - Row {i + 1} of {verticalImageBytesList.Count}");
 
-            using var image = SKBitmap.Decode(verticalImageBytesList[i]);
+            using var image = SKImage.FromEncodedData(verticalImageBytesList[i]);
 
             if (i == 0)
             {
                 // First row - include full height
                 var sourceRect = new SKRect(0, 0, image.Width, Math.Min(image.Height, finalDocumentHeight));
                 var destRect = new SKRect(0, 0, image.Width, Math.Min(image.Height, finalDocumentHeight));
-                canvas.DrawBitmap(image, sourceRect, destRect);
+                canvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
                 currentHeight = Math.Min(image.Height, finalDocumentHeight);
             }
             else
@@ -336,7 +336,7 @@ public static class WebViewToJpg
                 var sourceRect = new SKRect(0, sourceStartY, image.Width, sourceStartY + heightToInclude);
                 var destRect = new SKRect(0, currentHeight, image.Width, currentHeight + heightToInclude);
 
-                canvas.DrawBitmap(image, sourceRect, destRect);
+                canvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
                 currentHeight += heightToInclude;
             }
 

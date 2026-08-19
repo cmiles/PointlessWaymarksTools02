@@ -71,7 +71,8 @@ public static class ImageHelpers
         {
             var scaledHeight = (int)(bitmap.Height * ((float)combinedWidth / bitmap.Width));
             var destRect = new SKRect(0, yOffset, combinedWidth, yOffset + scaledHeight);
-            canvas.DrawBitmap(bitmap, destRect);
+            using var skImage = SKImage.FromBitmap(bitmap);
+            canvas.DrawImage(skImage, destRect, SKSamplingOptions.Default);
             yOffset += scaledHeight;
         }
 

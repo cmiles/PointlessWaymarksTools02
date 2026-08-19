@@ -216,7 +216,7 @@ public static class PlaywrightScreenShot
                         Type = ScreenshotType.Png
                     });
 
-                    using var image = SKBitmap.Decode(screenshot);
+                    using var image = SKImage.FromEncodedData(screenshot);
                     var sourceRect = new SKRect(0, 0, image.Width, image.Height);
                     var destRect = new SKRect(currentWidth, 0, currentWidth + image.Width, image.Height);
 
@@ -238,7 +238,7 @@ public static class PlaywrightScreenShot
                         currentWidth += image.Width;
                     }
 
-                    rowCanvas.DrawBitmap(image, sourceRect, destRect);
+                    rowCanvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
                 }
 
                 progress?.Report($"Row {rowIndex} - Encoding Image");
@@ -306,14 +306,14 @@ public static class PlaywrightScreenShot
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report($"Final Image Assembly - Row {i + 1} of {verticalImageBytesList.Count}");
 
-                using var image = SKBitmap.Decode(verticalImageBytesList[i]);
+                using var image = SKImage.FromEncodedData(verticalImageBytesList[i]);
 
                 if (i == 0)
                 {
                     // First row - include full height
                     var sourceRect = new SKRect(0, 0, image.Width, Math.Min(image.Height, finalDocumentHeight));
                     var destRect = new SKRect(0, 0, image.Width, Math.Min(image.Height, finalDocumentHeight));
-                    canvas.DrawBitmap(image, sourceRect, destRect);
+                    canvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
                     currentHeight = Math.Min(image.Height, finalDocumentHeight);
                 }
                 else
@@ -337,7 +337,7 @@ public static class PlaywrightScreenShot
                     var sourceRect = new SKRect(0, sourceStartY, image.Width, sourceStartY + heightToInclude);
                     var destRect = new SKRect(0, currentHeight, image.Width, currentHeight + heightToInclude);
 
-                    canvas.DrawBitmap(image, sourceRect, destRect);
+                    canvas.DrawImage(image, sourceRect, destRect, SKSamplingOptions.Default);
                     currentHeight += heightToInclude;
                 }
 
