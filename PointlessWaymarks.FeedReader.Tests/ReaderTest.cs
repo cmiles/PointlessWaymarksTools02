@@ -112,8 +112,8 @@ namespace PointlessWaymarks.FeedReader.Tests
             }
             catch (Exception ex)
             {
-                Assert.AreEqual(ex.InnerException.GetType(), typeof(System.Net.WebException));
-                Assert.AreEqual(ex.InnerException.Message, "The request was aborted: Could not create SSL/TLS secure channel.");
+                Assert.AreEqual(typeof(System.Net.WebException), ex.InnerException.GetType());
+                Assert.AreEqual("The request was aborted: Could not create SSL/TLS secure channel.", ex.InnerException.Message);
             }
             
         }
