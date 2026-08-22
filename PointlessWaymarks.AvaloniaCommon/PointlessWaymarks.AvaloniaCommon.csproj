@@ -38,28 +38,28 @@
         <None Remove="Icons\video-outline.svg" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="AngleSharp.Js" Version="1.0.0-beta.43" />
-        <PackageReference Include="Avalonia" Version="11.3.2" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
-        <PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.2" />
-        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.3.0.6" />
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.0.4" />
-        <PackageReference Include="BinToss.GroupBox.Avalonia" Version="1.0.0" />
-        <PackageReference Include="Clowd.Clipboard.Avalonia" Version="1.1.4" />
-        <PackageReference Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
-        <PackageReference Include="DynamicData" Version="9.4.1" />
-        <PackageReference Include="Jint" Version="4.4.0" />
-        <PackageReference Include="MarkdownViewer.Core" Version="1.0.4" />
-        <PackageReference Include="Metalama.Framework" Version="2025.1.10" />
-        <PackageReference Include="Notification.Avalonia" Version="2.1.0" />
-        <PackageReference Include="Serilog" Version="4.3.0" />
-        <PackageReference Include="TypeSupport" Version="1.2.0" />
-        <PackageReference Include="VectSharp.MarkdownCanvas" Version="1.7.0" />
+        <PackageReference Include="AngleSharp.Js" />
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Svg.Skia" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="Avalonia.Fonts.Inter" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" />
+        <PackageReference Include="Avalonia.Xaml.Behaviors" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+        <PackageReference Include="BinToss.GroupBox.Avalonia" />
+        <PackageReference Include="Clowd.Clipboard.Avalonia" />
+        <PackageReference Include="Deadpikle.AvaloniaProgressRing" />
+        <PackageReference Include="DynamicData" />
+        <PackageReference Include="Jint" />
+        <PackageReference Include="MarkdownViewer.Core" />
+        <PackageReference Include="Metalama.Framework" />
+        <PackageReference Include="Notification.Avalonia" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="TypeSupport" />
+        <PackageReference Include="VectSharp.MarkdownCanvas" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.2">
+        <PackageReference Include="Avalonia.Diagnostics">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>

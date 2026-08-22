@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,13 +9,13 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="GeoTimeZone" Version="6.1.0" />
-    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="MetadataExtractor" Version="2.9.3" />
-    <PackageReference Include="NetTopologySuite" Version="2.6.0" />
-    <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
-    <PackageReference Include="NetTopologySuite.IO.GPX" Version="1.1.1" />
-    <PackageReference Include="Unofficial.Garmin.Connect" Version="0.9.2" />
+    <PackageReference Include="GeoTimeZone" />
+    <PackageReference Include="MathNet.Numerics" />
+    <PackageReference Include="MetadataExtractor" />
+    <PackageReference Include="NetTopologySuite" />
+    <PackageReference Include="NetTopologySuite.IO.GeoJSON" />
+    <PackageReference Include="NetTopologySuite.IO.GPX" />
+    <PackageReference Include="Unofficial.Garmin.Connect" />
   </ItemGroup>
 
   <ItemGroup>

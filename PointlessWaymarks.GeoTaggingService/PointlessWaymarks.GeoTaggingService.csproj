@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Metalama.Framework" Version="2026.1.24" />
-    <PackageReference Include="TagLibSharp" Version="2.3.0" />
-    <PackageReference Include="XmpCore" Version="6.1.10.1" />
+    <PackageReference Include="Metalama.Framework" />
+    <PackageReference Include="TagLibSharp" />
+    <PackageReference Include="XmpCore" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -21,8 +21,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.7.1" />
-    <PackageReference Include="AngleSharp.Io" Version="1.1.0" />
-    <PackageReference Include="AngleSharp.Js" Version="1.0.1" />
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="AngleSharp.Io" />
+    <PackageReference Include="AngleSharp.Js" />
   </ItemGroup>
 </Project>

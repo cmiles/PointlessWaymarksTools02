@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <UseWPF>true</UseWPF>
@@ -54,28 +54,28 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FilterDataGrid" Version="1.2.9" />
-        <PackageReference Include="gong-wpf-dragdrop" Version="4.0.0" />
-        <PackageReference Include="HtmlTableHelper" Version="1.2.4" />
-        <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
-        <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
-        <PackageReference Include="MathConverter" Version="3.0.0" />
-        <PackageReference Include="MdXaml.Plugins" Version="1.27.0" />
-        <PackageReference Include="MetadataExtractor" Version="2.9.3" />
-        <PackageReference Include="Metalama.Framework" Version="2026.1.24" />
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
-        <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.2901" />
-        <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
-        <PackageReference Include="NetTopologySuite.Features" Version="2.2.0" />
-        <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
-        <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
-        <PackageReference Include="PDFtoImage" Version="5.3.0" />
-        <PackageReference Include="PhotoSauce.MagicScaler" Version="0.15.0" />
-        <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
-        <PackageReference Include="SkiaSharp" Version="4.151.1" />
-        <PackageReference Include="TypeSupport" Version="1.2.0" />
-        <PackageReference Include="ValueInjecter" Version="3.2.0" />
-        <PackageReference Include="WpfScreenHelper" Version="2.1.1" />
+        <PackageReference Include="FilterDataGrid" />
+        <PackageReference Include="gong-wpf-dragdrop" />
+        <PackageReference Include="HtmlTableHelper" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="Markdig.Wpf" />
+        <PackageReference Include="MathConverter" />
+        <PackageReference Include="MdXaml.Plugins" />
+        <PackageReference Include="MetadataExtractor" />
+        <PackageReference Include="Metalama.Framework" />
+        <PackageReference Include="Microsoft.Web.WebView2" />
+        <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" />
+        <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" />
+        <PackageReference Include="NetTopologySuite.Features" />
+        <PackageReference Include="OneOf.SourceGenerator" />
+        <PackageReference Include="Ookii.Dialogs.Wpf" />
+        <PackageReference Include="PDFtoImage" />
+        <PackageReference Include="PhotoSauce.MagicScaler" />
+        <PackageReference Include="SharpVectors.Wpf" />
+        <PackageReference Include="SkiaSharp" />
+        <PackageReference Include="TypeSupport" />
+        <PackageReference Include="ValueInjecter" />
+        <PackageReference Include="WpfScreenHelper" />
     </ItemGroup>
 
     <ItemGroup>
