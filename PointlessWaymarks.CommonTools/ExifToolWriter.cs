@@ -158,32 +158,106 @@ public static class ExifToolWriter
 
         foreach (var file in files)
         {
-            string? argsFilePath = null;
-            try
+            const int maxAttempts = 3;
+            var success = false;
+            var lastError = string.Empty;
+            var exifToolTmpPath = $"{file.FullName}_exiftool_tmp";
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                progress?.Report($"Writing metadata to {file.Name}...");
+                string? argsFilePath = null;
+                try
+                {
+                    // Clean up any stale/leftover _exiftool_tmp file from previous runs or failed attempts
+                    if (File.Exists(exifToolTmpPath))
+                    {
+                        try
+                        {
+                            var tmpAttr = File.GetAttributes(exifToolTmpPath);
+                            if (tmpAttr.HasFlag(FileAttributes.ReadOnly))
+                                File.SetAttributes(exifToolTmpPath, FileAttributes.Normal);
+                            File.Delete(exifToolTmpPath);
+                        }
+                        catch
+                        {
+                            // If locked, we will see if waiting helps
+                        }
+                    }
 
-                var args = BuildArguments(request, file);
+                    // Ensure target file is not marked read-only
+                    if (file.Exists)
+                    {
+                        file.Refresh();
+                        if (file.IsReadOnly)
+                        {
+                            try
+                            {
+                                file.IsReadOnly = false;
+                            }
+                            catch
+                            {
+                                // Attempt to continue anyway
+                            }
+                        }
+                    }
 
-                argsFilePath = Path.Combine(Path.GetTempPath(), $"exiftool-args-{Guid.NewGuid():N}.txt");
-                await File.WriteAllLinesAsync(argsFilePath, args, new UTF8Encoding(false));
+                    progress?.Report(attempt == 1
+                        ? $"Writing metadata to {file.Name}..."
+                        : $"Writing metadata to {file.Name} (attempt {attempt}/{maxAttempts})...");
 
-                progress?.Report(GetCommandLinePreview(exifToolExe, request, file));
+                    var args = BuildArguments(request, file);
 
-                var (exitCode, stdOut, stdErr) = await RunExifToolAsync(exifToolExe, argsFilePath);
+                    argsFilePath = Path.Combine(Path.GetTempPath(), $"exiftool-args-{Guid.NewGuid():N}.txt");
+                    await File.WriteAllLinesAsync(argsFilePath, args, new UTF8Encoding(false));
 
-                if (exitCode != 0)
-                    throw new InvalidOperationException($"ExifTool error ({exitCode}): {stdErr}\n{stdOut}");
+                    progress?.Report(GetCommandLinePreview(exifToolExe, request, file));
 
-                result.FilesProcessed++;
+                    var (exitCode, stdOut, stdErr) = await RunExifToolAsync(exifToolExe, argsFilePath);
+
+                    if (exitCode != 0)
+                    {
+                        var errorMsg = $"ExifTool error ({exitCode}): {stdErr}\n{stdOut}".Trim();
+                        throw new InvalidOperationException(errorMsg);
+                    }
+
+                    result.FilesProcessed++;
+                    success = true;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                    if (attempt < maxAttempts)
+                    {
+                        progress?.Report(
+                            $"ExifTool write failed for {file.Name} (attempt {attempt}/{maxAttempts}): {ex.Message}. Retrying in {250 * attempt}ms...");
+                        await Task.Delay(250 * attempt);
+                    }
+                }
+                finally
+                {
+                    FileLocationTools.TryDeleteFile(argsFilePath);
+                }
             }
-            catch (Exception ex)
+
+            if (!success)
             {
-                result.Errors.Add($"{file.Name}: {ex.Message}");
-            }
-            finally
-            {
-                FileLocationTools.TryDeleteFile(argsFilePath);
+                result.Errors.Add($"{file.Name}: {lastError}");
+                // Cleanup temp file if left behind
+                if (File.Exists(exifToolTmpPath))
+                {
+                    try
+                    {
+                        var tmpAttr = File.GetAttributes(exifToolTmpPath);
+                        if (tmpAttr.HasFlag(FileAttributes.ReadOnly))
+                            File.SetAttributes(exifToolTmpPath, FileAttributes.Normal);
+                        File.Delete(exifToolTmpPath);
+                    }
+                    catch
+                    {
+                        // Ignore
+                    }
+                }
             }
         }
 

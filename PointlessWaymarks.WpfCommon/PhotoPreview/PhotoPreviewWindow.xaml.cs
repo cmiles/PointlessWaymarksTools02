@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.WpfCommon.Status;
 using PointlessWaymarks.WpfCommon.Utility;
@@ -20,8 +22,10 @@ public partial class PhotoPreviewWindow
     private double _scrollStartV;
 
     // Lock Zoom state - stored as percentages (0.0-1.0) of scrollable extent
-    private double _lockedScrollPercentageX;
-    private double _lockedScrollPercentageY;
+    private double _lockedScrollPercentageX = 0.5;
+    private double _lockedScrollPercentageY = 0.5;
+    private string? _displayedFilePath;
+    private bool _pendingRestoreScroll;
 
     public PhotoPreviewWindow()
     {
@@ -52,6 +56,7 @@ public partial class PhotoPreviewWindow
 
         await ThreadSwitcher.ResumeBackgroundAsync();
 
+        window.PreviewContext.PreviewClearing += window.OnPreviewClearing;
         window.PreviewContext.PreviewImageLoaded += window.OnPreviewImageLoaded;
         window.PreviewContext.PropertyChanged += window.OnPreviewContextPropertyChanged;
 
@@ -113,7 +118,19 @@ public partial class PhotoPreviewWindow
         _isPanning = false;
         ImageScrollViewer.ReleaseMouseCapture();
         Cursor = Cursors.Arrow;
+        if (PreviewContext.LockZoom)
+        {
+            SaveScrollPosition();
+        }
         e.Handled = true;
+    }
+
+    private void ImageScrollViewer_OnScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (_pendingRestoreScroll && (e.ExtentWidthChange != 0 || e.ExtentHeightChange != 0 || e.ViewportWidthChange != 0 || e.ViewportHeightChange != 0))
+        {
+            RestoreScrollPosition();
+        }
     }
 
     private void ImageScrollViewer_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -144,10 +161,23 @@ public partial class PhotoPreviewWindow
             ImageScrollViewer.HorizontalOffset + newViewportPoint.X - viewportPoint.X);
         ImageScrollViewer.ScrollToVerticalOffset(
             ImageScrollViewer.VerticalOffset + newViewportPoint.Y - viewportPoint.Y);
+
+        if (PreviewContext.LockZoom)
+        {
+            SaveScrollPosition();
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        if (PreviewContext.HasOutstandingRatingChanges)
+        {
+            e.Cancel = true;
+            _ = StatusContext.ToastWarning("Cannot close window: rating changes are still being saved to file.");
+            return;
+        }
+
+        PreviewContext.PreviewClearing -= OnPreviewClearing;
         PreviewContext.PreviewImageLoaded -= OnPreviewImageLoaded;
         PreviewContext.PropertyChanged -= OnPreviewContextPropertyChanged;
         PreviewContext.Cleanup();
@@ -158,6 +188,26 @@ public partial class PhotoPreviewWindow
     {
         if (e.PropertyName == nameof(PhotoPreviewContext.DisplayTitle))
             Dispatcher.InvokeAsync(() => WindowTitle = $"Photo Preview - {PreviewContext.DisplayTitle}");
+        else if (e.PropertyName == nameof(PhotoPreviewContext.LockZoom))
+        {
+            if (PreviewContext.LockZoom)
+                Dispatcher.InvokeAsync(SaveScrollPosition);
+        }
+    }
+
+    private void OnPreviewClearing(object? sender, EventArgs e)
+    {
+        void Action()
+        {
+            if (PreviewContext.LockZoom)
+                SaveScrollPosition();
+            _displayedFilePath = null;
+        }
+
+        if (Dispatcher.CheckAccess())
+            Action();
+        else
+            Dispatcher.Invoke(Action);
     }
 
     private async void OpenFileInExplorer_OnClick(object sender, RoutedEventArgs e)
@@ -171,20 +221,29 @@ public partial class PhotoPreviewWindow
     {
         // This outer lambda runs at Normal priority (9), which is BEFORE the
         // DataBind-priority (8) binding update for the new PreviewImage.
-        // That means the old image is still displayed, so we can capture its
-        // scroll state accurately.
+        // That means the old image is still displayed (if one was displayed and not cleared),
+        // so we can capture its scroll state accurately.
         Dispatcher.InvokeAsync(() =>
         {
-            if (PreviewContext.LockZoom && PreviewContext.PreviewImage != null)
+            var targetFilePath = PreviewContext.CurrentFilePath;
+
+            if (PreviewContext.LockZoom)
             {
-                // Capture scroll position and zoom while the old image is still laid out
-                SaveScrollPosition();
+                // Only capture scroll position if a previous image was actively displayed in the window
+                // (i.e. not coming from a cleared / empty state).
+                if (!string.IsNullOrEmpty(_displayedFilePath) && MainImage.Source != null)
+                {
+                    SaveScrollPosition();
+                }
+
                 var savedZoom = PreviewContext.ZoomLevel;
+                _pendingRestoreScroll = true;
 
                 // Restore at Loaded priority (6) — after the image binding update
                 // (DataBind=8) and layout pass (Render=7) have completed.
                 Dispatcher.InvokeAsync(() =>
                 {
+                    _displayedFilePath = targetFilePath;
                     PreviewContext.ZoomLevel = savedZoom;
                     ImageScrollViewer.UpdateLayout();
                     RestoreScrollPosition();
@@ -192,33 +251,39 @@ public partial class PhotoPreviewWindow
             }
             else
             {
+                _pendingRestoreScroll = false;
                 // Fit-to-window also needs to run after the new image has been laid out
-                Dispatcher.InvokeAsync(FitImageToWindow,
-                    System.Windows.Threading.DispatcherPriority.Loaded);
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _displayedFilePath = targetFilePath;
+                    FitImageToWindow();
+                }, System.Windows.Threading.DispatcherPriority.Loaded);
             }
         });
     }
 
     /// <summary>
     ///     Saves the current scroll position as percentages of the scrollable extent.
-    ///     Call this before navigating to capture the user's view position.
+    ///     Call this before navigating or clearing to capture the user's view position.
     /// </summary>
     private void SaveScrollPosition()
     {
+        if (_pendingRestoreScroll || MainImage.Source == null) return;
+
         var extentWidth = ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth;
         var extentHeight = ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight;
 
-        _lockedScrollPercentageX = extentWidth > 0
-            ? ImageScrollViewer.HorizontalOffset / extentWidth
-            : 0.5; // Default to center if no scrollable extent
+        if (extentWidth <= 0 && extentHeight <= 0) return;
 
-        _lockedScrollPercentageY = extentHeight > 0
-            ? ImageScrollViewer.VerticalOffset / extentHeight
-            : 0.5; // Default to center if no scrollable extent
+        if (extentWidth > 0)
+        {
+            _lockedScrollPercentageX = Math.Clamp(ImageScrollViewer.HorizontalOffset / extentWidth, 0.0, 1.0);
+        }
 
-        // Clamp to valid range
-        _lockedScrollPercentageX = Math.Clamp(_lockedScrollPercentageX, 0.0, 1.0);
-        _lockedScrollPercentageY = Math.Clamp(_lockedScrollPercentageY, 0.0, 1.0);
+        if (extentHeight > 0)
+        {
+            _lockedScrollPercentageY = Math.Clamp(ImageScrollViewer.VerticalOffset / extentHeight, 0.0, 1.0);
+        }
     }
 
     /// <summary>
@@ -230,6 +295,23 @@ public partial class PhotoPreviewWindow
         var extentWidth = ImageScrollViewer.ExtentWidth - ImageScrollViewer.ViewportWidth;
         var extentHeight = ImageScrollViewer.ExtentHeight - ImageScrollViewer.ViewportHeight;
 
+        // Check expected dimensions from PreviewImage if ScrollViewer extents haven't updated yet
+        if (PreviewContext.PreviewImage is BitmapSource bmp && (extentWidth <= 0 || extentHeight <= 0))
+        {
+            var viewportW = ImageScrollViewer.ViewportWidth > 0 ? ImageScrollViewer.ViewportWidth : ImageScrollViewer.ActualWidth;
+            var viewportH = ImageScrollViewer.ViewportHeight > 0 ? ImageScrollViewer.ViewportHeight : ImageScrollViewer.ActualHeight;
+            var expectedW = (bmp.Width * PreviewContext.ZoomLevel) - viewportW;
+            var expectedH = (bmp.Height * PreviewContext.ZoomLevel) - viewportH;
+
+            // If the image is expected to be scrollable but ScrollViewer hasn't updated its extents yet,
+            // keep _pendingRestoreScroll true so ScrollChanged will apply it once extents are ready.
+            if ((expectedW > 1 && extentWidth <= 0) || (expectedH > 1 && extentHeight <= 0))
+            {
+                _pendingRestoreScroll = true;
+                return;
+            }
+        }
+
         // Calculate target offsets from percentages
         var targetH = extentWidth > 0 ? _lockedScrollPercentageX * extentWidth : 0;
         var targetV = extentHeight > 0 ? _lockedScrollPercentageY * extentHeight : 0;
@@ -240,25 +322,47 @@ public partial class PhotoPreviewWindow
 
         ImageScrollViewer.ScrollToHorizontalOffset(targetH);
         ImageScrollViewer.ScrollToVerticalOffset(targetV);
+
+        _pendingRestoreScroll = false;
     }
 
     private void ZoomActual_OnClick(object sender, RoutedEventArgs e)
     {
         PreviewContext.ZoomLevel = 1.0;
+        if (PreviewContext.LockZoom)
+        {
+            ImageScrollViewer.UpdateLayout();
+            SaveScrollPosition();
+        }
     }
 
     private void ZoomFit_OnClick(object sender, RoutedEventArgs e)
     {
         FitImageToWindow();
+        if (PreviewContext.LockZoom)
+        {
+            ImageScrollViewer.UpdateLayout();
+            SaveScrollPosition();
+        }
     }
 
     private void ZoomIn_OnClick(object sender, RoutedEventArgs e)
     {
         PreviewContext.ZoomLevel = Math.Min(PreviewContext.ZoomLevel + ZoomStep, MaxZoom);
+        if (PreviewContext.LockZoom)
+        {
+            ImageScrollViewer.UpdateLayout();
+            SaveScrollPosition();
+        }
     }
 
     private void ZoomOut_OnClick(object sender, RoutedEventArgs e)
     {
         PreviewContext.ZoomLevel = Math.Max(PreviewContext.ZoomLevel - ZoomStep, MinZoom);
+        if (PreviewContext.LockZoom)
+        {
+            ImageScrollViewer.UpdateLayout();
+            SaveScrollPosition();
+        }
     }
 }

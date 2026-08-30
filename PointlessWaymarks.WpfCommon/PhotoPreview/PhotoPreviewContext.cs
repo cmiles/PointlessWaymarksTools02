@@ -51,6 +51,7 @@ public partial class PhotoPreviewContext
     public required StatusControlContext StatusContext { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
     public ObservableCollection<RatingChangeNotification> RatingNotifications { get; set; } = new();
+    public bool HasOutstandingRatingChanges => RatingNotifications.Count > 0;
     public bool WriteRatingToFile { get; set; } = true;
     public double ZoomLevel { get; set; } = 1.0;
 
@@ -221,8 +222,6 @@ public partial class PhotoPreviewContext
         {
             if (e.PropertyName == nameof(StarRatingContext.UserValue) && !context._settingRatingInternally)
             {
-                context.StatusContext.Progress(
-                    $"Rating entry changed to {context.RatingEntry.UserValue} — triggering write...");
                 context.StartSetRatingInternal(context.RatingEntry.UserValue);
             }
         };
@@ -963,6 +962,8 @@ public partial class PhotoPreviewContext
 
     private void OnPreviewCleared()
     {
+        PreviewClearing?.Invoke(this, EventArgs.Empty);
+
         lock (_ctsLock)
         {
             _previewCts?.Cancel();
@@ -1112,6 +1113,12 @@ public partial class PhotoPreviewContext
     }
 
     /// <summary>
+    ///     Fired just before the current preview is cleared (e.g. when nothing is selected).
+    ///     The window subscribes to this to capture zoom/scroll position before the image is unloaded.
+    /// </summary>
+    public event EventHandler? PreviewClearing;
+
+    /// <summary>
     ///     Raised on the background thread after a new PreviewImage has been set.
     ///     The window subscribes to this to calculate fit-to-window zoom.
     /// </summary>
@@ -1134,18 +1141,80 @@ public partial class PhotoPreviewContext
     {
         if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
 
+        var targetFilePath = CurrentFilePath;
+        var originalRating = RatingEntry.UserValue;
+        if (rating == originalRating) return;
+
         var stars = rating > 0 ? new string('★', rating) + new string('☆', 5 - rating) : "No Rating";
-        var fileName = Path.GetFileName(CurrentFilePath);
+        var fileName = Path.GetFileName(targetFilePath);
 
-        var notification = RatingChangeNotification.CreateInstance(this, $"Setting Rating {stars} - {fileName}");
+        RatingChangeNotification? notification = null;
+        if (WriteRatingToFile)
+        {
+            notification = RatingChangeNotification.CreateInstance(this, $"Saving Rating {stars} ({rating}) — {fileName}");
+            if (StatusContext.ContextDispatcher.CheckAccess())
+                RatingNotifications.Add(notification);
+            else
+                StatusContext.ContextDispatcher.InvokeAsync(() => RatingNotifications.Add(notification),
+                    DispatcherPriority.Send);
+        }
 
-        RatingNotifications.Add(notification);
+        _settingRatingInternally = true;
+        RatingEntry.UserValue = rating;
+        _settingRatingInternally = false;
 
-        // Let the just-added notification paint before the background rating
-        // write floods the dispatcher with Normal-priority Progress() updates.
-        StatusContext.ContextDispatcher.Invoke(() => { }, DispatcherPriority.Render);
+        _ = Task.Run(() => WeakReferenceMessenger.Default.Send(
+                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(targetFilePath, rating,
+                    StatusContext.StatusControlContextId))))
+            .ContinueWith(
+                t => StatusContext.ToastError(
+                    $"Error sending rating changed message: {t.Exception!.GetBaseException().Message}"),
+                TaskContinuationOptions.OnlyOnFaulted);
 
-        StatusContext.RunNonBlockingAction(async void () => await SetRatingInternal(rating, stars, fileName, notification));
+        if (!WriteRatingToFile || notification == null)
+        {
+            _ = StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                StatusContext.Progress($"Writing rating {stars} ({rating}) to file: {fileName}...");
+                await WriteRatingWithExifTool(targetFilePath, rating);
+                StatusContext.Progress($"Rating written to file: {fileName}");
+                _ = StatusContext.ToastSuccess($"Rating saved: {stars} ({rating})");
+            }
+            catch (Exception ex)
+            {
+                await StatusContext.ContextDispatcher.InvokeAsync(() =>
+                {
+                    if (string.Equals(CurrentFilePath, targetFilePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _settingRatingInternally = true;
+                        RatingEntry.UserValue = originalRating;
+                        _settingRatingInternally = false;
+                    }
+                });
+
+                _ = Task.Run(() => WeakReferenceMessenger.Default.Send(
+                        new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(targetFilePath, originalRating,
+                            StatusContext.StatusControlContextId))))
+                    .ContinueWith(
+                        t => StatusContext.ToastError(
+                            $"Error sending rating rollback message: {t.Exception!.GetBaseException().Message}"),
+                        TaskContinuationOptions.OnlyOnFaulted);
+
+                await StatusContext.ShowMessageWithOkButton("Rating Save Error",
+                    $"Failed to write rating {stars} ({rating}) to {fileName}:{Environment.NewLine}{Environment.NewLine}{ex.Message}");
+            }
+            finally
+            {
+                await StatusContext.ContextDispatcher.InvokeAsync(() => RatingNotifications.Remove(notification),
+                    DispatcherPriority.Send);
+            }
+        });
     }
 
     public void SetRating0() => StartSetRatingInternal(0);
@@ -1154,53 +1223,6 @@ public partial class PhotoPreviewContext
     public void SetRating3() => StartSetRatingInternal(3);
     public void SetRating4() => StartSetRatingInternal(4);
     public void SetRating5() => StartSetRatingInternal(5);
-
-    private async Task SetRatingInternal(int rating, string stars, string fileName, RatingChangeNotification notification)
-    {
-        await ThreadSwitcher.ResumeBackgroundAsync();
-
-        if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
-        if (rating == RatingEntry.UserValue) return;
-
-        StatusContext.Progress($"Setting rating {stars} ({rating}) on {fileName}...");
-
-        _settingRatingInternally = true;
-        RatingEntry.UserValue = rating;
-        StatusContext.Progress($"Sending rating changed message for {fileName}...");
-        _ = Task.Run(() => WeakReferenceMessenger.Default.Send(
-                new PhotoItemRatingChangedMessage(new PhotoItemRatingChangedData(CurrentFilePath, rating,
-                    StatusContext.StatusControlContextId))))
-            .ContinueWith(
-                t => StatusContext.ToastError(
-                    $"Error sending rating changed message: {t.Exception!.GetBaseException().Message}"),
-                TaskContinuationOptions.OnlyOnFaulted);
-        _settingRatingInternally = false;
-
-        if (WriteRatingToFile)
-        {
-            StatusContext.Progress($"Writing rating to file: {fileName}...");
-            notification.Message = $"Writing Rating {stars}{Environment.NewLine}{Environment.NewLine}File - {fileName}";
-            try
-            {
-                await WriteRatingWithExifTool(CurrentFilePath, rating);
-            }
-            catch (Exception ex)
-            {
-                notification.Message = $"Error: {ex.Message} - {fileName}";
-                notification.HasError = true;
-                _ = StatusContext.ToastError($"Failed to write rating to file: {ex.Message}");
-                return;
-            }
-
-            StatusContext.Progress($"Rating written to file: {fileName}");
-        }
-
-        await ThreadSwitcher.ResumeForegroundAsync();
-        RatingNotifications.Remove(notification);
-        await ThreadSwitcher.ResumeBackgroundAsync();
-
-        _ = StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
-    }
 
     /// <summary>
     ///     Converts a shutter speed APEX value to a human-readable string.

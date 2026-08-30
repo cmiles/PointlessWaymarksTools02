@@ -42,7 +42,12 @@ public partial class StarRatingControl : UserControl
     private void OnContextPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(StarRatingContext.UserValue))
-            Dispatcher.Invoke(UpdateStars);
+        {
+            if (Dispatcher.CheckAccess())
+                UpdateStars();
+            else
+                Dispatcher.Invoke(UpdateStars);
+        }
     }
 
     private void Star_Click(object sender, RoutedEventArgs e)
