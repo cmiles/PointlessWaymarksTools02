@@ -29,14 +29,77 @@ public static class WindowInitialPositionHelpers
 
         if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
 
-        Rect screenBounds;
+        Rect screenBounds = Rect.Empty;
 
-        parentWindow ??= Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ??
-                         Application.Current.Windows.OfType<Window>().FirstOrDefault();
+        if (parentWindow == null && Application.Current != null && Application.Current.Dispatcher.CheckAccess())
+        {
+            try
+            {
+                parentWindow = Application.Current.Windows.OfType<Window>().FirstOrDefault(x => x.IsActive) ??
+                               Application.Current.Windows.OfType<Window>().FirstOrDefault();
+            }
+            catch
+            {
+                // Ignore collection access errors across threads
+            }
+        }
 
-        screenBounds = parentWindow == null
-            ? Screen.FromHandle(new WindowInteropHelper(window).Handle).WpfWorkingArea
-            : Screen.FromHandle(new WindowInteropHelper(parentWindow).Handle).WpfWorkingArea;
+        if (parentWindow != null && parentWindow.Dispatcher.CheckAccess())
+        {
+            try
+            {
+                var parentHandle = new WindowInteropHelper(parentWindow).Handle;
+                if (parentHandle != IntPtr.Zero)
+                {
+                    screenBounds = Screen.FromHandle(parentHandle)?.WpfWorkingArea ?? Rect.Empty;
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+
+        if (screenBounds.IsEmpty && window.Dispatcher.CheckAccess())
+        {
+            try
+            {
+                var windowHandle = new WindowInteropHelper(window).Handle;
+                if (windowHandle != IntPtr.Zero)
+                {
+                    screenBounds = Screen.FromHandle(windowHandle)?.WpfWorkingArea ?? Rect.Empty;
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+
+        if (screenBounds.IsEmpty)
+        {
+            try
+            {
+                var point = new System.Windows.Point(
+                    double.IsNaN(window.Left) ? 0 : window.Left,
+                    double.IsNaN(window.Top) ? 0 : window.Top);
+                screenBounds = Screen.FromPoint(point)?.WpfWorkingArea ?? Rect.Empty;
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+
+        if (screenBounds.IsEmpty)
+        {
+            screenBounds = Screen.PrimaryScreen?.WpfWorkingArea ?? SystemParameters.WorkArea;
+        }
+
+        if (double.IsNaN(window.Width) || window.Width <= 0) window.Width = 600;
+        if (double.IsNaN(window.Height) || window.Height <= 0) window.Height = 400;
+        if (double.IsNaN(window.Left)) window.Left = screenBounds.Left + 10;
+        if (double.IsNaN(window.Top)) window.Top = screenBounds.Top + 24;
 
         if (window.Left + window.Width > screenBounds.Right) window.Left = screenBounds.Right - window.Width;
 

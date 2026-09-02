@@ -96,7 +96,9 @@ public class TextBoxDoubleClickLauncher : Behavior<TextBox>
         var firstHttpUrlMatch = Regex.Match(finalString,
             @"\b(https?)://[-A-Z0-9+&@#/%?=~_|$!:,.;]*[A-Z0-9+&@#/%=~_|$]", RegexOptions.IgnoreCase);
         if (firstHttpUrlMatch.Success)
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var dispatcher = Dispatcher;
+            Action launch = () =>
             {
                 try
                 {
@@ -107,7 +109,13 @@ public class TextBoxDoubleClickLauncher : Behavior<TextBox>
                 {
                     Console.WriteLine(ex);
                 }
-            }));
+            };
+
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(launch);
+            else
+                launch();
+        }
 
         var firstFileMatch = Regex.Match(finalString, @"(?<drive> \b[a-z]:\\)
 		(?<folder>(?>[^\\/:*?""<>|\x00-\x1F]{0,254}[^.\\/:*?""<>|\x00-\x1F]\\)*)
@@ -124,7 +132,8 @@ public class TextBoxDoubleClickLauncher : Behavior<TextBox>
 
             if (!directory.Exists) return;
 
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            var dispatcher = Dispatcher;
+            Action launch = () =>
             {
                 try
                 {
@@ -135,7 +144,12 @@ public class TextBoxDoubleClickLauncher : Behavior<TextBox>
                 {
                     Console.WriteLine(ex);
                 }
-            }));
+            };
+
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(launch);
+            else
+                launch();
         }
         catch (Exception ex)
         {

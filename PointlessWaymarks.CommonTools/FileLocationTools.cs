@@ -118,6 +118,15 @@ public static class FileLocationTools
         return directory;
     }
 
+    public static FileInfo DefaultPhotoRatingHistoryDatabaseFile()
+    {
+        var file =
+            new FileInfo(Path.Combine(DefaultStorageDirectory().FullName,
+                "PwPhotoRatingHistory.db"));
+
+        return file;
+    }
+
     private static async Task DownloadFileAsync(HttpClient httpClient, string url, string destinationPath,
         string label, IProgress<string>? progress)
     {

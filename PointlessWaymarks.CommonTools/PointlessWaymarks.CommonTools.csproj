@@ -48,6 +48,7 @@
     <PackageReference Include="Serilog.Sinks.DelegatingText" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="SimMetricsCore" />
+    <PackageReference Include="System.Data.SQLite.Core" />
     <PackageReference Include="System.Linq.Dynamic.Core" />
     <PackageReference Include="TinyIpc" />
     <PackageReference Include="UTF.Unknown" />

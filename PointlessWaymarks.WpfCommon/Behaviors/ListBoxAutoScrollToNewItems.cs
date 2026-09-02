@@ -20,11 +20,21 @@ public class ListBoxAutoScrollToNewItems : Behavior<ListBox>
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems?[0] != null)
             try
             {
-                Application.Current?.Dispatcher?.BeginInvoke((Action) (() =>
+                var item = e.NewItems[0]!;
+                var dispatcher = Dispatcher;
+                if (dispatcher.CheckAccess())
                 {
-                    AssociatedObject.ScrollIntoView(e.NewItems[0]!);
-                    AssociatedObject.SelectedItem = e.NewItems[0];
-                }), DispatcherPriority.DataBind);
+                    AssociatedObject?.ScrollIntoView(item);
+                    if (AssociatedObject != null) AssociatedObject.SelectedItem = item;
+                }
+                else
+                {
+                    dispatcher.BeginInvoke((Action) (() =>
+                    {
+                        AssociatedObject?.ScrollIntoView(item);
+                        if (AssociatedObject != null) AssociatedObject.SelectedItem = item;
+                    }), DispatcherPriority.DataBind);
+                }
             }
             catch (Exception ex)
             {
