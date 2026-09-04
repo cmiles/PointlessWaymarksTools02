@@ -1173,18 +1173,6 @@ public partial class PhotoPreviewContext
                 StatusContext.StatusControlContextId)));
 
         await StatusContext.ToastSuccess($"Rating: {stars} ({rating})");
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await PhotoRatingHistoryDatabase.WriteRating(targetFilePath, rating);
-            }
-            catch (Exception ex)
-            {
-                await StatusContext.ToastError($"Error writing rating to background storage: {ex.Message}");
-            }
-        });
     }
 
     /// <summary>
