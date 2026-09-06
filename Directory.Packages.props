@@ -29,6 +29,7 @@
     <PackageVersion Include="DynamicData" Version="9.4.1" />
     <PackageVersion Include="FilterDataGrid" Version="1.2.9" />
     <PackageVersion Include="Flurl.Http" Version="4.0.2" />
+    <PackageVersion Include="Garmin.FIT.Sdk" Version="21.171.0" />
     <PackageVersion Include="GeoTimeZone" Version="6.1.0" />
     <PackageVersion Include="gong-wpf-dragdrop" Version="4.0.0" />
     <PackageVersion Include="HtmlTableHelper" Version="1.2.4" />

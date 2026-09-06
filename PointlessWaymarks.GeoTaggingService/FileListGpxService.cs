@@ -38,14 +38,28 @@ public class FileListGpxService(List<FileInfo> listOfGpxFiles) : IGpxService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var gpx = await GpxTools.ReadGpxFile(loopFile.file, progress);
+            if (loopFile.file.Extension.Equals(".fit", StringComparison.OrdinalIgnoreCase))
+            {
+                var waypoints = await FitTools.GpxWaypointsFromFitFile(loopFile.file, progress);
+                if (waypoints.Count == 0) continue;
 
-            if (!gpx.Tracks.Any(t => t.Segments.SelectMany(y => y.Waypoints).Count() > 1)) continue;
+                allPointsList.AddRange(waypoints
+                    .Where(x => x.TimestampUtc is not null)
+                    .Select(x => new WaypointAndSource(x, loopFile.file.Name))
+                    .OrderBy(x => x.Waypoint.TimestampUtc)
+                    .ToList());
+            }
+            else
+            {
+                var gpx = await GpxTools.ReadGpxFile(loopFile.file, progress);
 
-            allPointsList.AddRange(gpx.Tracks.SelectMany(x => x.Segments).SelectMany(x => x.Waypoints)
-                .Select(x => new WaypointAndSource(x, loopFile.file.Name))
-                .OrderBy(x => x.Waypoint.TimestampUtc)
-                .ToList());
+                if (!gpx.Tracks.Any(t => t.Segments.SelectMany(y => y.Waypoints).Count() > 1)) continue;
+
+                allPointsList.AddRange(gpx.Tracks.SelectMany(x => x.Segments).SelectMany(x => x.Waypoints)
+                    .Select(x => new WaypointAndSource(x, loopFile.file.Name))
+                    .OrderBy(x => x.Waypoint.TimestampUtc)
+                    .ToList());
+            }
         }
 
         progress?.Report($"Found {allPointsList.Count} Points");
@@ -59,42 +73,51 @@ public class FileListGpxService(List<FileInfo> listOfGpxFiles) : IGpxService
     {
         if (!listOfGpxFiles.Any())
         {
-            progress?.Report("No GPX files?");
+            progress?.Report("No GPX, FIT or TCX files?");
             _gpxFiles = [];
+            return;
         }
 
         var filesNotPresent = listOfGpxFiles.Where(x =>
         {
             x.Refresh();
-            return x.Exists;
+            return !x.Exists;
         }).ToList();
 
         if (filesNotPresent.Any())
             progress?.Report(
-                $"Files found in Gpx List that are no longer present - skipping {filesNotPresent.Count} files - {string.Join(" ,", filesNotPresent.Select(x => x.FullName))}");
+                $"Files found in List that are no longer present - skipping {filesNotPresent.Count} files - {string.Join(" ,", filesNotPresent.Select(x => x.FullName))}");
 
         var newGpxList = new List<(DateTime startDateTime, DateTime endDateTime, FileInfo file)>();
 
         var counter = 0;
 
-        var existingGpxFiles = listOfGpxFiles.Where(x => x.Exists).ToList();
+        var existingFiles = listOfGpxFiles.Where(x => x.Exists).ToList();
 
-        foreach (var loopGpx in existingGpxFiles)
+        foreach (var loopFile in existingFiles)
         {
-            if (++counter % 50 == 0) progress?.Report($"File List Gpx Service - {counter} of {existingGpxFiles.Count}");
-
-            var gpx = await GpxTools.ReadGpxFile(loopGpx, progress);
+            if (++counter % 50 == 0) progress?.Report($"File List Gpx Service - {counter} of {existingFiles.Count}");
 
             var allPoints = new List<GpxWaypoint>();
 
-            allPoints.AddRange(gpx.Tracks.SelectMany(x => x.Segments).SelectMany(x => x.Waypoints)
-                .Where(x => x.TimestampUtc is not null));
+            if (loopFile.Extension.Equals(".fit", StringComparison.OrdinalIgnoreCase))
+            {
+                var fitPoints = await FitTools.GpxWaypointsFromFitFile(loopFile, progress);
+                allPoints.AddRange(fitPoints.Where(x => x.TimestampUtc is not null));
+            }
+            else
+            {
+                var gpx = await GpxTools.ReadGpxFile(loopFile, progress);
 
-            allPoints.AddRange(gpx.Waypoints.Where(x => x.TimestampUtc is not null));
+                allPoints.AddRange(gpx.Tracks.SelectMany(x => x.Segments).SelectMany(x => x.Waypoints)
+                    .Where(x => x.TimestampUtc is not null));
+
+                allPoints.AddRange(gpx.Waypoints.Where(x => x.TimestampUtc is not null));
+            }
 
             if (!allPoints.Any())
             {
-                progress?.Report($"File List Gpx Service - {loopGpx.FullName} no points for use GeoTagging found");
+                progress?.Report($"File List Gpx Service - {loopFile.FullName} no points for use GeoTagging found");
                 continue;
             }
 
@@ -106,12 +129,12 @@ public class FileListGpxService(List<FileInfo> listOfGpxFiles) : IGpxService
             if (timestampMin != null && timestampMax != null)
             {
                 var toAdd = (timestampMin.Value,
-                    timestampMax.Value, loopGpx);
+                    timestampMax.Value, loopFile);
 
                 newGpxList.Add(toAdd);
 
                 progress?.Report(
-                    $"File Gpx Service - {toAdd.loopGpx.FullName} UTC from {toAdd.Item1} to {toAdd.Item2}");
+                    $"File Gpx Service - {toAdd.loopFile.FullName} UTC from {toAdd.Item1} to {toAdd.Item2}");
             }
         }
 

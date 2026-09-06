@@ -9,6 +9,7 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Garmin.FIT.Sdk" />
     <PackageReference Include="GeoTimeZone" />
     <PackageReference Include="MathNet.Numerics" />
     <PackageReference Include="MetadataExtractor" />

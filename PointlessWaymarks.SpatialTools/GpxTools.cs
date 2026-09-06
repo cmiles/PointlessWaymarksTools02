@@ -8,7 +8,7 @@ using PointlessWaymarks.CommonTools;
 
 namespace PointlessWaymarks.SpatialTools;
 
-public static class GpxTools
+public static partial class GpxTools
 {
     public static GpxTrack GpxTrackFromLineFeature(IFeature line, DateTime? utcStart, string name, string comment = "",
         string description = "")
@@ -42,7 +42,7 @@ public static class GpxTools
             ImmutableArray<GpxWebLink>.Empty, null, string.Empty, null, [trackSegment]);
     }
 
-    public static Feature LineFeatureFromGpxRoute(GpxRouteInformation routeInformation)
+    public static Feature LineFeatureFromGpxRoute(GpsRouteInformation routeInformation)
     {
         // ReSharper disable once CoVariantArrayConversion
         var newLine = new LineString(routeInformation.Track.ToArray());
@@ -59,7 +59,7 @@ public static class GpxTools
         return feature;
     }
 
-    public static Feature LineFeatureFromGpxRouteBuffered(GpxRouteInformation routeInformation, double bufferInFeet)
+    public static Feature LineFeatureFromGpxRouteBuffered(GpsRouteInformation routeInformation, double bufferInFeet)
     {
         if (bufferInFeet <= 0) return LineFeatureFromGpxRoute(routeInformation);
 
@@ -85,7 +85,7 @@ public static class GpxTools
         return feature;
     }
 
-    public static Feature LineFeatureFromGpxTrack(GpxTrackInformation trackInformation)
+    public static Feature LineFeatureFromGpxTrack(GpsTrackInformation trackInformation)
     {
         // ReSharper disable once CoVariantArrayConversion
         var newLine = new LineString(trackInformation.Track.ToArray());
@@ -102,7 +102,7 @@ public static class GpxTools
         return feature;
     }
 
-    public static Feature LineFeatureFromGpxTrackBuffered(GpxTrackInformation trackInformation, double bufferInFeet)
+    public static Feature LineFeatureFromGpxTrackBuffered(GpsTrackInformation trackInformation, double bufferInFeet)
     {
         if (bufferInFeet <= 0) return LineFeatureFromGpxTrack(trackInformation);
         
@@ -149,7 +149,7 @@ public static class GpxTools
             });
     }
 
-    public static GpxRouteInformation RouteInformationFromGpxRoute(GpxRoute toConvert)
+    public static GpsRouteInformation RouteInformationFromGpxRoute(GpxRoute toConvert)
     {
         var name = toConvert.Name ?? string.Empty;
 
@@ -188,7 +188,7 @@ public static class GpxTools
             .Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
         var descriptionAndComment = string.Join(". ", descriptionAndCommentList);
 
-        return new GpxRouteInformation(nameAndLabelAndType, descriptionAndComment, pointList);
+        return new GpsRouteInformation(nameAndLabelAndType, descriptionAndComment, pointList);
     }
 
     public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)> RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
@@ -209,10 +209,10 @@ public static class GpxTools
         return (featureCollection, boundingBox);
     }
 
-    public static async Task<List<GpxRouteInformation>> RoutesFromGpxFile(
+    public static async Task<List<GpsRouteInformation>> RoutesFromGpxFile(
         FileInfo gpxFile, IProgress<string>? progress = null)
     {
-        var returnList = new List<GpxRouteInformation>();
+        var returnList = new List<GpsRouteInformation>();
 
         if (gpxFile is not { Exists: true }) return returnList;
 
@@ -240,7 +240,7 @@ public static class GpxTools
         return returnList;
     }
 
-    public static GpxTrackInformation TrackInformationFromGpxTrack(GpxTrack toConvert)
+    public static GpsTrackInformation TrackInformationFromGpxTrack(GpxTrack toConvert)
     {
         var name = toConvert.Name ?? string.Empty;
 
@@ -306,7 +306,7 @@ public static class GpxTools
             .Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
         var descriptionAndComment = string.Join(". ", descriptionAndCommentList);
 
-        return new GpxTrackInformation(nameAndLabelAndType, descriptionAndComment, startDateTimeLocal, endDateTimeLocal,
+        return new GpsTrackInformation(nameAndLabelAndType, descriptionAndComment, startDateTimeLocal, endDateTimeLocal,
             startDateTimeUtc, endDateTimeUtc, pointList);
     }
 
@@ -351,10 +351,10 @@ public static class GpxTools
         return (featureCollection, boundingBox);
     }
 
-    public static async Task<List<GpxTrackInformation>> TracksFromGpxFile(
+    public static async Task<List<GpsTrackInformation>> TracksFromGpxFile(
         FileInfo gpxFile, IProgress<string>? progress = null)
     {
-        var returnList = new List<GpxTrackInformation>();
+        var returnList = new List<GpsTrackInformation>();
 
         if (gpxFile is not { Exists: true }) return returnList;
 
@@ -432,15 +432,4 @@ public static class GpxTools
 
         return (returnList, bounds);
     }
-
-    public record GpxRouteInformation(string Name, string Description, List<CoordinateZ> Track);
-
-    public record GpxTrackInformation(
-        string Name,
-        string Description,
-        DateTime? StartsOnLocal,
-        DateTime? EndsOnLocal,
-        DateTime? StartsOnUtc,
-        DateTime? EndsOnUtc,
-        List<CoordinateZ> Track);
 }

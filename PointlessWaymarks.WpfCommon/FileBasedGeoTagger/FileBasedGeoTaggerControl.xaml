@@ -25,9 +25,9 @@
     <Grid>
         <TabControl SelectedIndex="{Binding SelectedTab, Mode=TwoWay}"
                     ItemContainerStyle="{StaticResource UnderlineOnSelectTabItemStyle}">
-            <TabItem Header="GPX Files">
+            <TabItem Header="GPX / FIT / TCX Files">
                 <Grid Style="{StaticResource InTabMarginStyle}">
-                    <GroupBox Header="Gpx Files">
+                    <GroupBox Header="GPX / FIT / TCX Files">
                         <Grid Margin="4">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -37,7 +37,7 @@
                                 Margin="4"
                                 HorizontalAlignment="Center"
                                 TextWrapping="Wrap">
-                                Use the buttons below to add all files in a Directory, all files in a Directory and all Subdirectories or to pick Files to add to the GPX files that location information will be taken from. You can also delete items in the list below.
+                                Use the buttons below to add all files in a Directory, all files in a Directory and all Subdirectories or to pick Files to add to the GPX/FIT/TCX files that location information will be taken from. You can also delete items in the list below.
                             </TextBlock>
                             <fileList:FileListControl
                                 Grid.Row="1"
@@ -77,7 +77,7 @@
                                 Margin="4"
                                 HorizontalAlignment="Center"
                                 TextWrapping="Wrap">
-                                Use the buttons below to add all files in a Directory, all files in a Directory and all Subdirectories or to pick Files that will be compared to the GPX/location information in the previous tab. You can also delete items in the list below.
+                                Use the buttons below to add all files in a Directory, all files in a Directory and all Subdirectories or to pick Files that will be compared to the GPX/FIT/TCX location information in the previous tab. You can also delete items in the list below.
                             </TextBlock>
                             <fileList:FileListControl
                                 Grid.Row="1"

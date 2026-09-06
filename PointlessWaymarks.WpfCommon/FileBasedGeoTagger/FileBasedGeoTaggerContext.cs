@@ -73,7 +73,7 @@ public partial class FileBasedGeoTaggerContext
 
         if (GpxFileList.Files == null || !GpxFileList.Files.Any())
         {
-            await StatusContext.ToastError("No GPX Files Selected?");
+            await StatusContext.ToastError("No GPX, FIT or TCX Files Selected?");
             return;
         }
 
@@ -154,8 +154,8 @@ public partial class FileBasedGeoTaggerContext
 
         GpxFileList = await FileListContext.CreateInstance(StatusContext, GpxFilesSettings,
             [new ContextMenuItemData { ItemCommand = ShowSelectedGpxFilesCommand, ItemName = "Show  Selected" }]);
-        GpxFileList.FileImportFilter = "gpx files (*.gpx)|*.gpx|All files (*.*)|*.*";
-        GpxFileList.DroppedFileExtensionAllowList = [".gpx"];
+        GpxFileList.FileImportFilter = "GPX, FIT and TCX files (*.gpx;*.fit;*.tcx)|*.gpx;*.fit;*.tcx|GPX files (*.gpx)|*.gpx|FIT files (*.fit)|*.fit|TCX files (*.tcx)|*.tcx|All files (*.*)|*.*";
+        GpxFileList.DroppedFileExtensionAllowList = [".gpx", ".fit", ".tcx"];
 
         PreviewMap.SetupCmsLeafletMapHtmlAndJs("Preview", 32.12063, -110.52313, true);
         WriteMap.SetupCmsLeafletMapHtmlAndJs("Write", 32.12063, -110.52313, true);
@@ -240,7 +240,7 @@ public partial class FileBasedGeoTaggerContext
 
         if (GpxFileList?.SelectedFiles == null || !GpxFileList.SelectedFiles.Any())
         {
-            await StatusContext.ToastWarning("No gpx files selected?");
+            await StatusContext.ToastWarning("No GPX, FIT or TCX files selected?");
             return;
         }
 
@@ -251,9 +251,27 @@ public partial class FileBasedGeoTaggerContext
 
         foreach (var loopFiles in frozenSelected)
         {
-            var fileFeatures = await GpxTools.TrackLinesFromGpxFile(loopFiles);
-            bounds.ExpandToInclude(fileFeatures.boundingBox);
-            featureList.AddRange(fileFeatures.features);
+            if (loopFiles.Extension.Equals(".fit", StringComparison.OrdinalIgnoreCase))
+            {
+                var fitFeature = await FitTools.TrackLineFromFitFile(loopFiles);
+                if (fitFeature != null)
+                {
+                    bounds.ExpandToInclude(fitFeature.BoundingBox);
+                    featureList.Add(fitFeature);
+                }
+                var (waypointFeatures, waypointBounds) = await FitTools.WaypointPointsFromFitFile(loopFiles);
+                if (waypointFeatures.Count > 0)
+                {
+                    bounds.ExpandToInclude(waypointBounds);
+                    featureList.AddRange(waypointFeatures);
+                }
+            }
+            else
+            {
+                var fileFeatures = await GpxTools.TrackLinesFromGpxFile(loopFiles);
+                bounds.ExpandToInclude(fileFeatures.boundingBox);
+                featureList.AddRange(fileFeatures.features);
+            }
         }
 
         var newCollection = new FeatureCollection();
@@ -268,7 +286,7 @@ public partial class FileBasedGeoTaggerContext
 
         var newPreviewWindow = await WebViewWindow.CreateInstance();
         newPreviewWindow.PositionWindowAndShow();
-        newPreviewWindow.SetupCmsLeafletMapHtmlAndJs("GPX Preview", 32.12063, -110.52313, true);
+        newPreviewWindow.SetupCmsLeafletMapHtmlAndJs("GPX/FIT/TCX Preview", 32.12063, -110.52313, true);
         newPreviewWindow.ToWebView.Enqueue(JsonData.CreateRequest(previewDto));
     }
 
