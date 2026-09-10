@@ -1,0 +1,53 @@
+<UserControl
+    x:Class="PointlessWaymarks.UnoCommon.StringDataEntry.StringDataEntryControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:utility="using:PointlessWaymarks.UnoCommon.Utility"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <utility:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+    </UserControl.Resources>
+    <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+            <TextBlock
+                VerticalAlignment="Center"
+                FontWeight="SemiBold"
+                Text="{Binding Title}"
+                ToolTipService.ToolTip="{Binding HelpText}" />
+            <Border
+                VerticalAlignment="Center"
+                Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibility}}">
+                <ToolTipService.ToolTip>
+                    <TextBlock Text="{Binding ReferenceValueString}" />
+                </ToolTipService.ToolTip>
+                <FontIcon
+                    FontSize="16"
+                    Foreground="RoyalBlue"
+                    Glyph="&#xE946;" />
+            </Border>
+            <Border
+                VerticalAlignment="Center"
+                Visibility="{Binding HasValidationIssues, Converter={StaticResource BooleanToVisibility}}">
+                <ToolTipService.ToolTip>
+                    <TextBlock Text="{Binding ValidationMessage}" />
+                </ToolTipService.ToolTip>
+                <FontIcon
+                    FontSize="16"
+                    Foreground="OrangeRed"
+                    Glyph="&#xE783;" />
+            </Border>
+        </StackPanel>
+        <TextBox
+            x:Name="ValueTextBox"
+            IsEnabled="{Binding IsEnabled}"
+            Text="{Binding UserValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock
+            Margin="0,2,0,0"
+            Foreground="OrangeRed"
+            Text="{Binding ValidationMessage}"
+            TextWrapping="Wrap"
+            Visibility="{Binding HasValidationIssues, Converter={StaticResource BooleanToVisibility}}" />
+    </StackPanel>
+</UserControl>
