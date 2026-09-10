@@ -40,59 +40,72 @@ public static class HelpMarkdown
         ### Packages Used by the Pointless Waymarks Project
 
         **Data:**
-         - [dotnet/efcore: EF Core is a modern object-database mapper for .NET. It supports LINQ queries, change tracking, updates, and schema migrations.](https://github.com/dotnet/efcore)
+         - [dotnet/efcore: EF Core is a modern object-database mapper for .NET. It supports LINQ queries, change tracking, updates, and schema migrations.](https://github.com/dotnet/efcore) - MIT License.
          - [SQLite](https://www.sqlite.org/index.html) - An absolutely brilliant project - having a Public Domain option for such a high quality data store that can be used locally and cross platform is amazing! Public Domain.
-         - [fluentmigrator/fluentmigrator: Fluent migrations framework for .NET](https://github.com/fluentmigrator/fluentmigrator) -  documentation](https://fluentmigrator.github.io/)
-        
-         **General:**
+         - [fluentmigrator/fluentmigrator: Fluent migrations framework for .NET](https://github.com/fluentmigrator/fluentmigrator) - [documentation](https://fluentmigrator.github.io/) - Apache-2.0 License.
+
+        **General:**
          - [commandlineparser/commandline: The best C# command line parser that brings standardized \*nix getopt style, for .NET. Includes F# support](https://github.com/commandlineparser/commandline) - MIT License.
+         - [CommunityToolkit/dotnet: .NET Community Toolkit (CommunityToolkit.Mvvm)](https://github.com/CommunityToolkit/dotnet) - MVVM primitives and source generators. MIT License.
          - [CompareNETObjects](https://github.com/sgray128/Compare-Net-Objects) - Comparison of object properties that stays quick/easy to use but has more options than you would be likely to create with custom reflection code - and potentially more durability than hand coded comparisons. Ms-PL License.
-          - [HangfireIO/Cronos: A fully-featured .NET library for working with Cron expressions. Built with time zones in mind and intuitively handles daylight saving time transitions](https://github.com/HangfireIO/Cronos). MIT License.
+         - [HangfireIO/Cronos: A fully-featured .NET library for working with Cron expressions. Built with time zones in mind and intuitively handles daylight saving time transitions](https://github.com/HangfireIO/Cronos). MIT License.
          - [bradymholt/cron-expression-descriptor: A .NET library that converts cron expressions into human readable descriptions.](https://github.com/bradymholt/cron-expression-descriptor). MIT License.
-         - [ButchersBoy/Dragablz: Dragable and tearable tab control for WPF](https://github.com/ButchersBoy/Dragablz) - MIT License.
+         - [dotnet-script/dotnet-script: Run C# scripts from the .NET CLI.](https://github.com/dotnet-script/dotnet-script) - MIT License.
          - [fluentscheduler/FluentScheduler: Automated job scheduler with fluent interface for the .NET platform.](https://github.com/fluentscheduler/FluentScheduler/tree/version-5) - New BSD License.
          - [GitHub - danm-de/Fractions: A fraction data type to calculate with rational numbers.](https://github.com/danm-de/Fractions) - Used in the Shutter Speed Content List Search - this makes dealing with fractions quite easy! Copyright (c) 2013-2017, Daniel Mueller <daniel@danm.de>. All rights reserved. Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
              1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
              2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
              - THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ""AS IS"" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-         - [IdentityModel/IdentityModel: .NET standard helper library for claims-based identity, OAuth 2.0 and OpenID Connect.](https://github.com/IdentityModel/IdentityModel) - Apache 2.0 License.
+         - [Garmin FIT SDK](https://developer.garmin.com/fit/overview/) - Flexible and Interoperable Data Transfer (FIT) Protocol License.
+         - [IdentityModel/IdentityModel: .NET standard helper library for claims-based identity, OAuth 2.0 and OpenID Connect.](https://github.com/IdentityModel/IdentityModel) - Apache-2.0 License.
          - [rickyah/ini-parser: Read/Write an INI file the easy way!](https://github.com/rickyah/ini-parser) - the ease of working with json makes it quite attractive but it is not as easy to edit by hand as an .ini file imho. MIT License.
+         - [NetTopologySuite/NetTopologySuite: A .NET GIS solution](https://github.com/NetTopologySuite/NetTopologySuite) - BSD-3-Clause License.
+         - [NetTopologySuite/GeoAPI: Standard GIS interfaces for .NET](https://github.com/NetTopologySuite/GeoAPI) - BSD-3-Clause License.
+         - [thomasgalliker/ObjectDumper: ObjectDumper is a utility which aims to serialize C# objects to string for debugging and logging purposes.](https://github.com/thomasgalliker/ObjectDumper) - Apache License, Version 2.0.
          - [PowerShell/PowerShell: PowerShell for every system!](https://github.com/PowerShell/PowerShell) - MIT License.
-         - [Microsoft.Recognizers.Text provides recognition and resolution of numbers, units, and date/time expressed in multiple languages](https://github.com/microsoft/Recognizers-Text) - An impressive Date and Time parsing library - the output is detailed and uses generic string/object data types (rather than custom .NET types) so takes some work to parse, but the excellent results and ability to easily recognize when the user has only input a date, or only a time, or both, or a range... is powerful. MIT License.
+         - [Chronic.Core: A natural language date/time parser for .NET Standard](https://github.com/mojombo/chronic) - Easy to use natural language date and time parsing for .NET. MIT License.
          - [shrayasr/pinboard.net](https://github.com/shrayasr/pinboard.net/blob/master/LICENSE) - Easy to use wrapper for [Pinboard - 'Social Bookmarking for Introverts'](http://pinboard.in/). MIT License.
-         - [bcwood/PressSharper: A C# class library for parsing WordPress XML export data.](https://github.com/bcwood/PressSharper) - the code from PressSharper was pulled into this project, updated for .net5.0, and lightly refactored and reformatted. PressSharper was forked from forked from [dreadwail/press_sharp: A C# class library for parsing Wordpress XML export data.](https://github.com/dreadwail/press_sharp). MIT License.
+         - [bcwood/PressSharper: A C# class library for parsing WordPress XML export data.](https://github.com/bcwood/PressSharper) - the code from PressSharper was pulled into this project, updated for .net5.0, and lightly refactored and reformatted. PressSharper was forked from [dreadwail/press_sharp: A C# class library for parsing Wordpress XML export data.](https://github.com/dreadwail/press_sharp). MIT License.
          - [omuleanu/ValueInjecter: convention based mapper](https://github.com/omuleanu/ValueInjecter) - Quick mapping between objects without any setup needed. MIT License.
 
         **Images:**
          - [mono/taglib-sharp: Library for reading and writing metadata in media files](https://github.com/mono/taglib-sharp) - for reading tags this application uses other libraries - but TagLib# is notable for also writing metadata. LGPL-2.1 license.
          - [GitHub - dimsemenov/PhotoSwipe: JavaScript image gallery for mobile and desktop, modular, framework independent](https://github.com/dimsemenov/PhotoSwipe) - [PhotoSwipe Examples and Documentation](https://photoswipe.com/getting-started/). MIT License.
-         - [Raleway - Google Fonts](https://fonts.google.com/specimen/Raleway/about)
-         - [drewnoakes/xmp-core-dotnet: .NET library for working with the Extensible Metadata Platform (XMP)](https://github.com/drewnoakes/xmp-core-dotnet/) - The goto C# library if you want to read/write XMP files.
+         - [Raleway - Google Fonts](https://fonts.google.com/specimen/Raleway/about) - SIL Open Font License (OFL).
+         - [drewnoakes/metadata-extractor-dotnet: Extracts Exif, IPTC, XMP, ICC and other metadata from image, video and audio files](https://github.com/drewnoakes/metadata-extractor-dotnet) - Apache License, Version 2.0.
+         - [drewnoakes/xmp-core-dotnet: .NET library for working with the Extensible Metadata Platform (XMP)](https://github.com/drewnoakes/xmp-core-dotnet/) - The goto C# library if you want to read/write XMP files. BSD-3-Clause License.
          - [GitHub - miromannino/Justified-Gallery: Javascript library to help creating high quality justified galleries of images.](https://github.com/miromannino/Justified-Gallery). MIT License.
+         - [kleisauke/net-vips: .NET bindings for libvips](https://github.com/kleisauke/net-vips) - Fast image processing library for .NET. MIT License.
          - [sungaila/PDFtoImage: A .NET library to render PDF files into images.](https://github.com/sungaila/PDFtoImage) - Uses the [pdfium](https://pdfium.googlesource.com/pdfium/) and [SkiaSharp](https://github.com/mono/SkiaSharp) to render PDFs to images. MIT License.
+         - [saucecontrol/PhotoSauce: MagicScaler high-performance, high-quality image processing pipeline for .NET](https://github.com/saucecontrol/PhotoSauce) - Fast high quality image resizing. MIT License.
+         - [mono/SkiaSharp: Cross-platform 2D graphics API for .NET platforms based on Google's Skia Graphics Library](https://github.com/mono/SkiaSharp) - MIT License.
 
         **Wpf:**
+         - [beto-rodriguez/LiveCharts2: Simple, flexible, interactive & powerful charts, maps and gauges for .Net](https://github.com/beto-rodriguez/LiveCharts2) - The LiveCharts2 library code is integrated directly into the project for data visualization and charts. MIT License.
          - [dfinke/PowerShellConsole: Create a PowerShell Console using the AvalonEdit control](https://github.com/dfinke/PowerShellConsole/tree/master) - Used code from this project to create an AvalonEdit based PowerShell control for the PowerShell Script Runner Project. Apache License 2.0.
          - [icsharpcode/AvalonEdit: The WPF-based text editor component used in SharpDevelop](https://github.com/icsharpcode/AvalonEdit) - A long lived, powerful, text editor for WPF. MIT license.
          - [dotnet/DataGridExtensions: Modular extensions for the WPF DataGrid control](https://github.com/dotnet/DataGridExtensions) - Easy way to add simple filtering and other features especially to an existing DataGrid. MIT License.
+         - [macgile/responsive_FilterDataGrid: WPF DataGrid with Excel-like column filters](https://github.com/macgile/responsive_FilterDataGrid) - MIT License.
          - [mmanela/diffplex: DiffPlex is Netstandard 1.0+ C# library to generate textual diffs.](https://github.com/mmanela/diffplex/) - Includes a WPF control to display diffs. Apache-2.0 license.
          - [Dirkster99/NumericUpDownLib: Implements numeric up down WPF controls](https://github.com/Dirkster99/NumericUpDownLib) - These up/down controls are missing from WPF - nice to find an updated open source library that provides these! MIT License.
-         - [anakic/Jot: Jot is a library for persisting and applying .NET application state.](https://github.com/anakic/Jot) - Used to save application state most prominently main window position.
-         - [Kinnara/ModernWpf: Modern styles and controls for your WPF applications](https://github.com/Kinnara/ModernWpf) - MIT License.
+         - [anakic/Jot: Jot is a library for persisting and applying .NET application state.](https://github.com/anakic/Jot) - Used to save application state most prominently main window position. MIT License.
+         - [ButchersBoy/Dragablz: Dragable and tearable tab control for WPF](https://github.com/ButchersBoy/Dragablz) - MIT License.
+         - [Microsoft.Web.WebView2: Microsoft Edge WebView2 control for Windows apps](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) - Microsoft WebView2 SDK License / BSD License.
 
         **Html:**
-         - [chartjs/Chart.js: Simple HTML5 Charts using the canvas tag](https://github.com/chartjs/Chart.js)
-         - [arminreiter/FeedReader: C# RSS and ATOM Feed reader library. Supports RSS 0.91, 0.92, 1.0, 2.0 and ATOM. Tested with multiple languages and feeds.](https://github.com/arminreiter/FeedReader)
+         - [chartjs/Chart.js: Simple HTML5 Charts using the canvas tag](https://github.com/chartjs/Chart.js) - MIT License.
+         - [arminreiter/FeedReader: C# RSS and ATOM Feed reader library. Supports RSS 0.91, 0.92, 1.0, 2.0 and ATOM. Tested with multiple languages and feeds.](https://github.com/arminreiter/FeedReader) - The code from FeedReader was integrated directly into the project and updated. MIT License.
          - [AngleSharp - Home](https://anglesharp.github.io/) - [AngleSharp/AngleSharp: The ultimate angle brackets parser library parsing HTML5, MathML, SVG and CSS to construct a DOM based on the official W3C specifications.](https://github.com/AngleSharp/AngleSharp) - Mainly used for parsing web pages when creating links. MIT License.
          - [zzzprojects/html-agility-pack: Html Agility Pack (HAP) is a free and open-source HTML parser written in C# to read/write DOM and supports plain XPATH or XSLT. It is a .NET code library that allows you to parse "out of the web" HTML files.](https://github.com/zzzprojects/html-agility-pack) - Used in the Memories email program to parse html. MIT License.
          - [shps951023/HtmlTableHelper: Mini C# IEnumerable object to HTML Table String Library](https://github.com/shps951023/HtmlTableHelper) - used for quick reporting output like the Photo Metadata Dump. MIT License.
          - [HtmlTags/htmltags: Simple object model for generating HTML](https://github.com/HtmlTags/htmltags) - Currently this project uses a combination of T4 templates and tags built by this library to produce HTML. Apache License, Version 2.0.
-         - [microsoft/playwright-dotnet: .NET version of the Playwright testing and automation library.](https://github.com/microsoft/playwright-dotnet) - MIT License.
+         - [microsoft/playwright-dotnet: .NET version of the Playwright testing and automation library.](https://github.com/microsoft/playwright-dotnet) - Apache-2.0 License.
          - [SebastianStehle/mjml-net](https://github.com/SebastianStehle/mjml-net) - An unofficial port of [Mailjet Markup Language](https://mjml.io/) for .NET - this is a good way to ease the pain of building HTML for email. MIT License.
 
         **Testing:**
-        - [GitHub - adobe/S3Mock: A simple mock implementation of the AWS S3 API startable as Docker image, TestContainer, JUnit 4 rule, JUnit Jupiter extension or TestNG listener](https://github.com/adobe/S3Mock#configuration) - One docker command to have a mock S3 server running and minimal configuration needed for simple cases!!! Apache License, Version 2.0.
-        - [nunit/nunit: NUnit Framework](https://github.com/nunit/nunit) - MIT License.
+         - [GitHub - adobe/S3Mock: A simple mock implementation of the AWS S3 API startable as Docker image, TestContainer, JUnit 4 rule, JUnit Jupiter extension or TestNG listener](https://github.com/adobe/S3Mock#configuration) - One docker command to have a mock S3 server running and minimal configuration needed for simple cases!!! Apache License, Version 2.0.
+         - [nunit/nunit: NUnit Framework](https://github.com/nunit/nunit) - MIT License.
+         - [Codeuctivity/SkiaSharp.Compare: SkiaSharp Compare compares images in .NET](https://github.com/Codeuctivity/SkiaSharp.Compare) - Apache License, Version 2.0.
         """;
 
     public static string PointlessWaymarksToolsPackagesBlock =>
@@ -180,18 +193,13 @@ public static class HelpMarkdown
 
         - [Visual Studio IDE](https://visualstudio.microsoft.com/), [.NET Core (Linux, macOS, and Windows)](https://dotnet.microsoft.com/download/dotnet-core)
         - [ReSharper: The Visual Studio Extension for .NET Developers by JetBrains](https://www.jetbrains.com/resharper/)
-        - [GitHub Copilot · Your AI pair programmer · GitHub](https://github.com/features/copilot)
         - [Metalama: A Framework for Clean & Concise Code in C#](https://www.postsharp.net/metalama)
-        - [Xavalon/XamlStyler: Visual Studio extension to help format your XAML source code](https://github.com/Xavalon/XamlStyler)
         - [PowerShell](https://github.com/PowerShell/PowerShell)
-        - [tareqimbasher/NetPad: A cross-platform C# editor and playground.](https://github.com/tareqimbasher/NetPad)
-        - [dotnet-script/dotnet-script: Run C# scripts from the .NET CLI.](https://github.com/dotnet-script/dotnet-script)
         - [AutoHotkey](https://www.autohotkey.com/)
         - [Beyond Compare](https://www.scootersoftware.com/)
         - [Compact-Log-Format-Viewer: A cross platform tool to read & query JSON aka CLEF log files created by Serilog](https://github.com/warrenbuckley/Compact-Log-Format-Viewer)
         - [DB Browser for SQLite](https://sqlitebrowser.org/)
         - [ExifTool by Phil Harvey](https://exiftool.org/) and [Oliver Betz | ExifTool Windows installer and portable package](https://oliverbetz.de/pages/Artikel/ExifTool-for-Windows)
-        - [Fork - a fast and friendly git client for Mac and Windows](https://git-fork.com/)
         - [grepWin: A powerful and fast search tool using regular expressions](https://github.com/stefankueng/grepWin)
         - [Inno Setup](https://jrsoftware.org/isinfo.php)
         - [Greenfish Icon Editor Pro](http://greenfishsoftware.org/gfie.php)

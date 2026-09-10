@@ -7,10 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\PointlessWaymarks.CommonTools\PointlessWaymarks.CommonTools.csproj" />
     </ItemGroup>
 

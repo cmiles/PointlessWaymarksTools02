@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PointlessWaymarks.SpatialTools\PointlessWaymarks.SpatialTools.csproj" />
     <ProjectReference Include="..\PointlessWaymarks.GeoTaggingService\PointlessWaymarks.GeoTaggingService.csproj" />
+    <ProjectReference Include="..\PointlessWaymarks.WindowsTools\PointlessWaymarks.WindowsTools.csproj" />
   </ItemGroup>
 
 

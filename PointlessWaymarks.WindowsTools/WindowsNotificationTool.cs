@@ -1,11 +1,13 @@
-﻿using System.Reflection;
+using System.Reflection;
+using System.Security;
 using System.Text;
 using System.Text.Encodings.Web;
 using Markdig;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Toolkit.Uwp.Notifications;
 using PointlessWaymarks.CommonTools;
 using Serilog;
+using Windows.Data.Xml.Dom;
+using Windows.UI.Notifications;
 
 namespace PointlessWaymarks.WindowsTools;
 
@@ -60,6 +62,39 @@ public class WindowsNotificationTool
     /// success, version
     /// </summary>
     public string NotificationIconSuccessUrl { get; set; } = string.Empty;
+
+    public static string CreateToastXml(string text, string? attribution = null, string? launchProtocol = null,
+        string? logoUrl = null, string? heroImageUrl = null)
+    {
+        var launchAttribute = !string.IsNullOrWhiteSpace(launchProtocol)
+            ? $" launch=\"{SecurityElement.Escape(launchProtocol)}\" activationType=\"protocol\""
+            : string.Empty;
+
+        var attributionElement = !string.IsNullOrWhiteSpace(attribution)
+            ? $"<text placement=\"attribution\">{SecurityElement.Escape(attribution)}</text>"
+            : string.Empty;
+
+        var logoElement = !string.IsNullOrWhiteSpace(logoUrl)
+            ? $"<image placement=\"appLogoOverride\" src=\"{SecurityElement.Escape(logoUrl)}\"/>"
+            : string.Empty;
+
+        var heroElement = !string.IsNullOrWhiteSpace(heroImageUrl)
+            ? $"<image placement=\"hero\" src=\"{SecurityElement.Escape(heroImageUrl)}\"/>"
+            : string.Empty;
+
+        return $"""
+            <toast{launchAttribute}>
+                <visual>
+                    <binding template="ToastGeneric">
+                        <text>{SecurityElement.Escape(text)}</text>
+                        {attributionElement}
+                        {logoElement}
+                        {heroElement}
+                    </binding>
+                </visual>
+            </toast>
+            """;
+    }
 
     public static async Task<WindowsNotificationTool> CreateInstance()
     {
@@ -163,23 +198,15 @@ public class WindowsNotificationTool
 
         if (uniqueName == null)
         {
-            new ToastContentBuilder()
-                .AddAppLogoOverride(new Uri(NotificationIconErrorUrl))
-                .AddText($"Error: {summary}. Unable to create Error Report File...")
-                .AddAttributionText(Attribution)
-                .Show();
-
+            ShowNotification($"Error: {summary}. Unable to create Error Report File...", logoUrl: NotificationIconErrorUrl);
             return;
         }
 
         await File.WriteAllTextAsync(uniqueName.FullName, errorReportDocument);
 
-        new ToastContentBuilder()
-            .AddAppLogoOverride(new Uri(NotificationIconErrorUrl))
-            .AddText($"Error: {summary}. Click for more information...")
-            .AddToastActivationInfo(uniqueName.FullName, ToastActivationType.Protocol)
-            .AddAttributionText(Attribution)
-            .Show();
+        ShowNotification($"Error: {summary}. Click for more information...",
+            launchProtocol: uniqueName.FullName,
+            logoUrl: NotificationIconErrorUrl);
     }
 
     /// <summary>
@@ -188,11 +215,7 @@ public class WindowsNotificationTool
     /// <param name="summary"></param>
     public void Message(string summary)
     {
-        new ToastContentBuilder()
-            .AddAppLogoOverride(new Uri(NotificationIconSuccessUrl))
-            .AddText(summary)
-            .AddAttributionText(Attribution)
-            .Show();
+        ShowNotification(summary, logoUrl: NotificationIconSuccessUrl);
     }
 
     /// <summary>
@@ -202,14 +225,8 @@ public class WindowsNotificationTool
     /// <param name="imageUrl"></param>
     public void Message(string summary, string imageUrl)
     {
-        new ToastContentBuilder()
-            .AddAppLogoOverride(new Uri(NotificationIconSuccessUrl))
-            .AddText(summary)
-            .AddAttributionText(Attribution)
-            .AddHeroImage(new Uri(imageUrl))
-            .Show();
+        ShowNotification(summary, logoUrl: NotificationIconSuccessUrl, heroImageUrl: imageUrl);
     }
-
 
     /// <summary>
     ///     Shows a Windows Notification with an action to open the specified
@@ -220,12 +237,31 @@ public class WindowsNotificationTool
     /// <param name="fileName"></param>
     public void MessageWithFile(string summary, string fileName)
     {
-        new ToastContentBuilder()
-            .AddAppLogoOverride(new Uri(NotificationIconSuccessUrl))
-            .AddText(summary)
-            .AddToastActivationInfo(fileName, ToastActivationType.Protocol)
-            .AddAttributionText(Attribution)
-            .Show();
+        ShowNotification(summary, launchProtocol: fileName, logoUrl: NotificationIconSuccessUrl);
+    }
+
+    private void ShowNotification(string text, string? launchProtocol = null, string? logoUrl = null,
+        string? heroImageUrl = null)
+    {
+        try
+        {
+            var xml = CreateToastXml(text, Attribution, launchProtocol, logoUrl, heroImageUrl);
+
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(xml);
+
+            var toast = new ToastNotification(xmlDoc);
+            var notifier = string.IsNullOrWhiteSpace(Attribution)
+                ? ToastNotificationManager.CreateToastNotifier("Pointless Waymarks Project")
+                : ToastNotificationManager.CreateToastNotifier(Attribution);
+
+            notifier.Show(toast);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            Log.Error(e, "Failure showing Windows Toast Notification.");
+        }
     }
 
     /// <summary>
