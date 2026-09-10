@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PointlessWaymarks.AvaloniaToolkit", "PointlessWaymarks.AvaloniaToolkit\PointlessWaymarks.AvaloniaToolkit.csproj", "{4A5E3DCD-513E-4A32-A079-5CFFE3DAD810}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PointlessWaymarks.CommonTools", "PointlessWaymarks.CommonTools\PointlessWaymarks.CommonTools.csproj", "{1D2CD4FC-E677-42DE-92CB-AB998ED78C69}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PointlessWaymarks.LlamaAspects", "PointlessWaymarks.LlamaAspects\PointlessWaymarks.LlamaAspects.csproj", "{4D7652A6-6B4C-4A1D-899E-7BF26294E985}"
