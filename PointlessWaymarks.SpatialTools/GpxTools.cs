@@ -16,8 +16,8 @@ public static partial class GpxTools
         var pointList = new List<GpxWaypoint>();
         var trackClock = DateTime.SpecifyKind(utcStart ?? DateTime.UtcNow, DateTimeKind.Utc);
 
-        pointList.Add(new GpxWaypoint(new GpxLongitude(line.Geometry.Coordinates[0].X!),
-                new GpxLatitude(line.Geometry.Coordinates[0].Y!), line.Geometry.Coordinates[0].Z)
+        pointList.Add(new GpxWaypoint(new GpxLongitude(line.Geometry.Coordinates[0].X),
+                new GpxLatitude(line.Geometry.Coordinates[0].Y), line.Geometry.Coordinates[0].Z)
             .WithTimestampUtc(trackClock));
 
         for (var i = 1; i < line.Geometry.Coordinates.Length; i++)
@@ -31,8 +31,8 @@ public static partial class GpxTools
             var time = Math.Max(TimeSpan.FromHours(distance / 2).TotalSeconds, 1);
             trackClock = trackClock.AddSeconds(time);
 
-            pointList.Add(new GpxWaypoint(new GpxLongitude(line.Geometry.Coordinates[i].X!),
-                    new GpxLatitude(line.Geometry.Coordinates[i].Y!), line.Geometry.Coordinates[i].Z)
+            pointList.Add(new GpxWaypoint(new GpxLongitude(line.Geometry.Coordinates[i].X),
+                    new GpxLatitude(line.Geometry.Coordinates[i].Y), line.Geometry.Coordinates[i].Z)
                 .WithTimestampUtc(trackClock));
         }
 
@@ -66,12 +66,14 @@ public static partial class GpxTools
         // ReSharper disable once CoVariantArrayConversion
         var newLine = new LineString(routeInformation.Track.ToArray());
 
-        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(),
+            newLine.StartPoint.X, newLine.StartPoint.Y);
         var longitudeDegrees
-            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X,
+                newLine.StartPoint.Y);
 
         var bufferedLine = newLine.Buffer((latitudeDegrees + longitudeDegrees) / 2D);
-        
+
         var feature = new Feature
         {
             Geometry = bufferedLine,
@@ -105,13 +107,15 @@ public static partial class GpxTools
     public static Feature LineFeatureFromGpxTrackBuffered(GpsTrackInformation trackInformation, double bufferInFeet)
     {
         if (bufferInFeet <= 0) return LineFeatureFromGpxTrack(trackInformation);
-        
+
         // ReSharper disable once CoVariantArrayConversion
         var newLine = new LineString(trackInformation.Track.ToArray());
 
-        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+        var latitudeDegrees = DistanceTools.ApproximateMetersToLatitudeDegrees(bufferInFeet.FeetToMeters(),
+            newLine.StartPoint.X, newLine.StartPoint.Y);
         var longitudeDegrees
-            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X, newLine.StartPoint.Y);
+            = DistanceTools.ApproximateMetersToLongitudeDegrees(bufferInFeet.FeetToMeters(), newLine.StartPoint.X,
+                newLine.StartPoint.Y);
 
         var bufferedLine = newLine.Buffer((latitudeDegrees + longitudeDegrees) / 2D);
 
@@ -191,7 +195,8 @@ public static partial class GpxTools
         return new GpsRouteInformation(nameAndLabelAndType, descriptionAndComment, pointList);
     }
 
-    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)> RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
+    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)>
+        RouteLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
         var gpxInfo = await RoutesFromGpxFile(gpxFile);
 
@@ -327,13 +332,8 @@ public static partial class GpxTools
         return (featureCollection, boundingBox);
     }
 
-    public record FeatureAndBufferedFeature(Feature Feature, Feature BufferedFeature)
-    {
-        public Feature Feature { get; set; } = Feature;
-        public Feature BufferedFeature { get; set; } = BufferedFeature;
-    }
-
-    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)> TrackLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
+    public static async Task<(List<FeatureAndBufferedFeature> features, Envelope boundingBox)>
+        TrackLinesFromGpxFileBuffered(FileInfo gpxFile, double bufferInFeet)
     {
         var gpxInfo = await TracksFromGpxFile(gpxFile);
 
@@ -431,5 +431,11 @@ public static partial class GpxTools
         }
 
         return (returnList, bounds);
+    }
+
+    public record FeatureAndBufferedFeature(Feature Feature, Feature BufferedFeature)
+    {
+        public Feature BufferedFeature { get; set; } = BufferedFeature;
+        public Feature Feature { get; set; } = Feature;
     }
 }

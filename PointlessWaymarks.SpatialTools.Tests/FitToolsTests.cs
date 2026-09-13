@@ -174,7 +174,7 @@ public class FitToolsTests
         // 3 laps with 5 points each = 15 total points
         var fitFile = CreateTestActivityFitFile("multi_lap_activity.fit", 36.0528, -112.0837, 3, 5);
 
-        var track = await FitTools.TrackInformationFromFitFile(fitFile);
+        var track = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
         Assert.That(track, Is.Not.Null, "FIT parsing must produce track information for valid activity file");
 
         Assert.Multiple(() =>
@@ -187,36 +187,6 @@ public class FitToolsTests
             Assert.That(track.StartsOnLocal, Is.Not.Null);
             Assert.That(track.Track[0].Z, Is.EqualTo(1200).Within(1.0), "First point altitude");
             Assert.That(track.Track[^1].Z, Is.EqualTo(1200 + 14 * 2).Within(1.0), "Last point altitude");
-        });
-    }
-
-    [Test]
-    public async Task RouteInformationFromFitFile_CourseWithPointsAndRecords()
-    {
-        var fitFile = CreateTestCourseFitFile("course_test.fit", "Grand Canyon Ridge Course", 36.1, -112.1, 10);
-
-        var route = await FitTools.RouteInformationFromFitFile(fitFile);
-        Assert.That(route, Is.Not.Null, "FIT parsing must produce route information for course file");
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(route!.Name, Is.EqualTo("Grand Canyon Ridge Course"));
-            Assert.That(route.Track, Has.Count.EqualTo(10));
-            Assert.That(route.Track[0].X, Is.EqualTo(-112.1).Within(1e-4));
-            Assert.That(route.Track[0].Y, Is.EqualTo(36.1).Within(1e-4));
-            Assert.That(route.Track[0].Z, Is.EqualTo(1500).Within(1.0));
-        });
-
-        var routeFeature = await FitTools.RouteLineFromFitFile(fitFile);
-        Assert.That(routeFeature, Is.Not.Null);
-        Assert.That(routeFeature!.Geometry, Is.TypeOf<LineString>());
-
-        var bufferedRoute = await FitTools.RouteLineFromFitFileBuffered(fitFile, 25);
-        Assert.That(bufferedRoute, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(bufferedRoute!.Feature.Geometry, Is.TypeOf<LineString>());
-            Assert.That(bufferedRoute.BufferedFeature.Geometry, Is.TypeOf<Polygon>());
         });
     }
 
@@ -250,7 +220,7 @@ public class FitToolsTests
     {
         var fitFile = CreateTestActivityFitFile("spatial_activity.fit", 36.0528, -112.0837, 2, 4);
 
-        var track = await FitTools.TrackInformationFromFitFile(fitFile);
+        var track = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
         Assert.That(track, Is.Not.Null);
 
         var lineFeature = FitTools.LineFeatureFromFitTrack(track!);
@@ -264,11 +234,11 @@ public class FitToolsTests
             Assert.That(bufferedLineFeature.Attributes["title"]?.ToString(), Is.EqualTo(track!.Name));
         });
 
-        var singleTrackLine = await FitTools.TrackLineFromFitFile(fitFile);
+        var singleTrackLine = await FitTools.TrackLineSimplifiedFromFitFile(fitFile);
         Assert.That(singleTrackLine, Is.Not.Null);
         Assert.That(singleTrackLine!.Geometry, Is.TypeOf<LineString>());
 
-        var singleBufferedTrackLine = await FitTools.TrackLineFromFitFileBuffered(fitFile, 50);
+        var singleBufferedTrackLine = await FitTools.TrackLineSimplifiedFromFitFileBuffered(fitFile, 50);
         Assert.That(singleBufferedTrackLine, Is.Not.Null);
         Assert.Multiple(() =>
         {
@@ -281,22 +251,16 @@ public class FitToolsTests
     public async Task NonExistentAndEmptyFiles_HandledGracefully()
     {
         var nonExistent = new FileInfo(Path.Combine(_testDir, "does_not_exist.fit"));
-        var trackInfo = await FitTools.TrackInformationFromFitFile(nonExistent);
-        var routeInfo = await FitTools.RouteInformationFromFitFile(nonExistent);
-        var trackLine = await FitTools.TrackLineFromFitFile(nonExistent);
-        var routeLine = await FitTools.RouteLineFromFitFile(nonExistent);
-        var bufferedTrackLine = await FitTools.TrackLineFromFitFileBuffered(nonExistent, 50);
-        var bufferedRouteLine = await FitTools.RouteLineFromFitFileBuffered(nonExistent, 50);
+        var trackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(nonExistent);
+        var trackLine = await FitTools.TrackLineSimplifiedFromFitFile(nonExistent);
+        var bufferedTrackLine = await FitTools.TrackLineSimplifiedFromFitFileBuffered(nonExistent, 50);
         var (waypoints, wpBounds) = await FitTools.WaypointPointsFromFitFile(nonExistent);
 
         Assert.Multiple(() =>
         {
             Assert.That(trackInfo, Is.Null);
-            Assert.That(routeInfo, Is.Null);
             Assert.That(trackLine, Is.Null);
-            Assert.That(routeLine, Is.Null);
             Assert.That(bufferedTrackLine, Is.Null);
-            Assert.That(bufferedRouteLine, Is.Null);
             Assert.That(waypoints, Is.Empty);
             Assert.That(wpBounds.IsNull, Is.True);
         });
@@ -304,8 +268,8 @@ public class FitToolsTests
         var emptyFile = new FileInfo(Path.Combine(_testDir, "empty.fit"));
         await File.WriteAllBytesAsync(emptyFile.FullName, []);
 
-        var emptyTrackInfo = await FitTools.TrackInformationFromFitFile(emptyFile);
-        var emptyTrackLine = await FitTools.TrackLineFromFitFile(emptyFile);
+        var emptyTrackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(emptyFile);
+        var emptyTrackLine = await FitTools.TrackLineSimplifiedFromFitFile(emptyFile);
 
         Assert.Multiple(() =>
         {
@@ -348,8 +312,8 @@ public class FitToolsTests
         }
 
         var fitFile = new FileInfo(filePath);
-        var trackInfo = await FitTools.TrackInformationFromFitFile(fitFile);
-        var trackLine = await FitTools.TrackLineFromFitFile(fitFile);
+        var trackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
+        var trackLine = await FitTools.TrackLineSimplifiedFromFitFile(fitFile);
 
         Assert.Multiple(() =>
         {
@@ -394,7 +358,7 @@ public class FitToolsTests
         }
 
         var fitFile = new FileInfo(filePath);
-        var trackInfo = await FitTools.TrackInformationFromFitFile(fitFile);
+        var trackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
 
         Assert.That(trackInfo, Is.Not.Null);
         Assert.Multiple(() =>
@@ -408,65 +372,6 @@ public class FitToolsTests
     }
 
     [Test]
-    public async Task CourseWithOnlyCoursePoints_FallsBackToCoursePointsForRoute()
-    {
-        var filePath = Path.Combine(_testDir, "course_points_only.fit");
-        using (var fileStream = File.Create(filePath))
-        {
-            var encode = new Encode(ProtocolVersion.V20);
-            encode.Open(fileStream);
-
-            var fileId = new FileIdMesg();
-            fileId.SetType(FitFile.Course);
-            var baseTime = new DateTime(2025, 9, 1, 8, 0, 0, DateTimeKind.Utc);
-            fileId.SetTimeCreated(new Dynastream.Fit.DateTime(baseTime));
-            encode.Write(fileId);
-
-            var course = new CourseMesg();
-            course.SetName(System.Text.Encoding.UTF8.GetBytes("Points Only Course"));
-            encode.Write(course);
-
-            var cp1 = new CoursePointMesg();
-            cp1.SetPositionLat(FitTools.DegreesToSemicircles(34.0));
-            cp1.SetPositionLong(FitTools.DegreesToSemicircles(-118.0));
-            cp1.SetName(System.Text.Encoding.UTF8.GetBytes("Start"));
-            encode.Write(cp1);
-
-            var cp2 = new CoursePointMesg();
-            cp2.SetPositionLat(FitTools.DegreesToSemicircles(34.1));
-            cp2.SetPositionLong(FitTools.DegreesToSemicircles(-118.1));
-            cp2.SetName(System.Text.Encoding.UTF8.GetBytes("End"));
-            encode.Write(cp2);
-
-            encode.Close();
-        }
-
-        var fitFile = new FileInfo(filePath);
-        var routeInfo = await FitTools.RouteInformationFromFitFile(fitFile);
-
-        Assert.That(routeInfo, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(routeInfo!.Name, Is.EqualTo("Points Only Course"));
-            Assert.That(routeInfo.Track, Has.Count.EqualTo(2));
-            Assert.That(routeInfo.Track[0].Y, Is.EqualTo(34.0).Within(1e-4));
-            Assert.That(routeInfo.Track[0].X, Is.EqualTo(-118.0).Within(1e-4));
-        });
-
-        var routeLine = await FitTools.RouteLineFromFitFile(fitFile);
-        var bufferedRouteLine = await FitTools.RouteLineFromFitFileBuffered(fitFile, 25);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(routeLine, Is.Not.Null);
-            Assert.That(bufferedRouteLine, Is.Not.Null);
-            Assert.That(routeLine!.Geometry, Is.TypeOf<LineString>());
-            Assert.That(bufferedRouteLine!.Feature.Geometry, Is.TypeOf<LineString>());
-            Assert.That(bufferedRouteLine.BufferedFeature.Geometry, Is.TypeOf<Polygon>());
-        });
-    }
-
-    [Test]
     public async Task FitFileHasLocation_ActivityWithGps_ReturnsTrue()
     {
         var fitFile = CreateTestActivityFitFile("activity_has_location.fit", 36.0528, -112.0837, 2, 3);
@@ -475,7 +380,7 @@ public class FitToolsTests
             Assert.That(await FitTools.FitFileHasLocation(fitFile), Is.True);
             Assert.That(await FitTools.FitFileHasLocationData(fitFile), Is.True);
             Assert.That(await FitTools.FitFileHasLocations(fitFile), Is.True);
-            Assert.That(await FitTools.FitFileHasTrackOrCourse(fitFile), Is.True);
+            Assert.That(await FitTools.FitFileHasTrack(fitFile), Is.True);
             Assert.That(await FitTools.FitFileHasLatLong(fitFile), Is.True);
         });
     }
@@ -580,7 +485,7 @@ public class FitToolsTests
         var hasLocation = await FitTools.FitFileHasLocation(fitFile);
         Assert.That(hasLocation, Is.True);
 
-        var trackInfo = await FitTools.TrackInformationFromFitFile(fitFile);
+        var trackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
         Assert.That(trackInfo, Is.Not.Null);
 
         Assert.Multiple(() =>
@@ -594,7 +499,7 @@ public class FitToolsTests
             Assert.That(trackInfo.StartsOnUtc!.Value, Is.EqualTo(startTimeUtc));
         });
 
-        var trackLine = await FitTools.TrackLineFromFitFile(fitFile);
+        var trackLine = await FitTools.TrackLineSimplifiedFromFitFile(fitFile);
         Assert.That(trackLine, Is.Not.Null);
         Assert.That(trackLine!.Geometry, Is.TypeOf<LineString>());
     }
@@ -625,7 +530,7 @@ public class FitToolsTests
 
         FitTools.WriteActivityFitFile(fitFile, lineList);
 
-        var trackInfo = await FitTools.TrackInformationFromFitFile(fitFile);
+        var trackInfo = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
         Assert.That(trackInfo, Is.Not.Null);
 
         Assert.Multiple(() =>
@@ -639,7 +544,7 @@ public class FitToolsTests
     [Test]
     public async Task WriteActivityFitFile_GpsTrackInformation_RoundTrips()
     {
-        var trackInfo = new GpxTools.GpsTrackInformation(
+        var trackInfo = new GpsTrackInformation(
             "Test Track Info",
             "Description of Track",
             null,
@@ -657,7 +562,7 @@ public class FitToolsTests
 
         FitTools.WriteActivityFitFile(fitFile, [trackInfo]);
 
-        var readBack = await FitTools.TrackInformationFromFitFile(fitFile);
+        var readBack = await FitTools.TrackInformationSimplifiedFromFitFile(fitFile);
         Assert.That(readBack, Is.Not.Null);
         Assert.Multiple(() =>
         {
