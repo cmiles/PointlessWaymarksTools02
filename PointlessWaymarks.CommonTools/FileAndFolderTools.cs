@@ -1,6 +1,8 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Polly;
 using Serilog;
 using UtfUnknown;
 
@@ -282,6 +284,86 @@ public static class FileAndFolderTools
         }
 
         return Task.FromResult(finalFile)!;
+    }
+
+    private const int FO_DELETE = 0x0003;
+    private const ushort FOF_SILENT = 0x0004;
+    private const ushort FOF_NOCONFIRMATION = 0x0010;
+    private const ushort FOF_ALLOWUNDO = 0x0040;
+    private const ushort FOF_NOERRORUI = 0x0400;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct SHFILEOPSTRUCT
+    {
+        public IntPtr hwnd;
+        public uint wFunc;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string pFrom;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string? pTo;
+        public ushort fFlags;
+        public bool fAnyOperationsAborted;
+        public IntPtr hNameMappings;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string? lpszProgressTitle;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
+
+    /// <summary>
+    ///     Sends a file to the Recycle Bin with no confirmation or error dialogs.
+    ///     Throws an IOException if the operation fails.
+    /// </summary>
+    public static void SendToRecycleBinSilent(string filePath)
+    {
+        if (!File.Exists(filePath)) return;
+
+        // SHFileOperation expects a double null-terminated string
+        var shf = new SHFILEOPSTRUCT
+        {
+            wFunc = FO_DELETE,
+            pFrom = filePath + "\0\0",
+            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT
+        };
+
+        var result = SHFileOperation(ref shf);
+        if (result != 0 || shf.fAnyOperationsAborted)
+        {
+            throw new IOException($"Failed to recycle file '{filePath}'. Shell error code: {result}");
+        }
+    }
+
+    /// <summary>
+    ///     Sends a file to the Recycle Bin with no confirmation or error dialogs.
+    ///     Throws an IOException if the operation fails.
+    /// </summary>
+    public static void SendToRecycleBinSilent(this FileInfo file)
+    {
+        SendToRecycleBinSilent(file.FullName);
+    }
+
+    /// <summary>
+    ///     Retries sending a file to the Recycle Bin with backoff delays before giving up.
+    /// </summary>
+    public static void SendToRecycleBinWithRetry(string filePath, int retryCount = 2)
+    {
+        var retryPolicy = Policy
+            .Handle<Exception>()
+            .WaitAndRetry(
+                retryCount,
+                attempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt - 1))
+            );
+
+        retryPolicy.Execute(() => SendToRecycleBinSilent(filePath));
+    }
+
+    /// <summary>
+    ///     Retries sending a file to the Recycle Bin with backoff delays before giving up.
+    /// </summary>
+    public static void SendToRecycleBinWithRetry(this FileInfo file, int retryCount = 2)
+    {
+        SendToRecycleBinWithRetry(file.FullName, retryCount);
     }
 
     public static string TryMakeFilenameValid(string fileNameToTransform)
