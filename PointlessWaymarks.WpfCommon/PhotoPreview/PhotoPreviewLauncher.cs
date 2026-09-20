@@ -12,17 +12,18 @@ public class PhotoPreviewLauncher : IDisposable, IAsyncDisposable
 
     public string ChannelId { get; }
     public PhotoPreviewIpcChannel? IpcChannel { get; private set; }
-
     public bool IsRunning => _previewProcess is { HasExited: false };
+    public bool? ShowRating { get; set; }
 
     public event EventHandler<PhotoItemRatingChangedIpcDto>? RatingChangedReceived;
     public event EventHandler<PhotoPreviewNavigateIpcDto>? NavigateReceived;
     public event EventHandler<PhotoPreviewFilterUnratedIpcDto>? FilterUnratedReceived;
     public event EventHandler? ProcessExited;
 
-    public PhotoPreviewLauncher(string? channelId = null)
+    public PhotoPreviewLauncher(string? channelId = null, bool? showRating = null)
     {
         ChannelId = string.IsNullOrWhiteSpace(channelId) ? Guid.NewGuid().ToString("N") : channelId;
+        ShowRating = showRating;
     }
 
     public static FileInfo? FindPreviewGuiExecutable()
@@ -113,7 +114,7 @@ public class PhotoPreviewLauncher : IDisposable, IAsyncDisposable
         return null;
     }
 
-    public async Task<bool> EnsureRunningAsync(string? initialFilePath = null, string? initialTitle = null, int initialRating = 0)
+    public async Task<bool> EnsureRunningAsync(string? initialFilePath = null, string? initialTitle = null, int initialRating = 0, bool? showRating = null)
     {
         if (IsRunning) return true;
 
@@ -138,6 +139,12 @@ public class PhotoPreviewLauncher : IDisposable, IAsyncDisposable
             arguments += $" --file \"{initialFilePath}\"";
             if (!string.IsNullOrWhiteSpace(initialTitle)) arguments += $" --title \"{initialTitle}\"";
             arguments += $" --rating {initialRating}";
+        }
+
+        var effectiveShowRating = showRating ?? ShowRating;
+        if (effectiveShowRating.HasValue)
+        {
+            arguments += $" --show-rating {effectiveShowRating.Value}";
         }
 
         var psi = new ProcessStartInfo

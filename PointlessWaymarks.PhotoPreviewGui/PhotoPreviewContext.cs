@@ -49,6 +49,7 @@ public partial class PhotoPreviewContext
     public bool ShowEdgeOverlay { get; set; }
     public bool ShowHistogram { get; set; } = true;
     public bool ShowMetadataOverlay { get; set; }
+    public bool ShowRating { get; set; } = true;
     public required StatusControlContext StatusContext { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
     public double ZoomLevel { get; set; } = 1.0;
@@ -1124,36 +1125,44 @@ public partial class PhotoPreviewContext
     [BlockingCommand]
     public async Task SetRating0()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(0);
     }
     [BlockingCommand]
     public async Task SetRating1()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(1);
     }
     [BlockingCommand]
     public async Task SetRating2()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(2);
     }
     [BlockingCommand]
     public async Task SetRating3()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(3);
     }
     [BlockingCommand]
     public async Task SetRating4()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(4);
     }
     [BlockingCommand]
     public async Task SetRating5()
     {
+        if (!ShowRating) return;
         await StartSetRatingInternal(5);
     }
 
     public async Task StartSetRatingInternal(int rating)
     {
+        if (!ShowRating) return;
+
         await ThreadSwitcher.ResumeBackgroundAsync();
         
         if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;

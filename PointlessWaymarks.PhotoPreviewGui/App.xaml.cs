@@ -32,6 +32,7 @@ public partial class App : Application
         string? initialFile = null;
         string? initialTitle = null;
         var initialRating = 0;
+        bool? showRating = null;
 
         for (var i = 0; i < e.Args.Length; i++)
         {
@@ -68,6 +69,23 @@ public partial class App : Application
                     initialRating = parsedRating;
                 }
             }
+            else if (arg.Equals("--show-rating", StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 < e.Args.Length && bool.TryParse(e.Args[i + 1], out var parsedShowRating))
+                {
+                    showRating = parsedShowRating;
+                    i++;
+                }
+                else
+                {
+                    showRating = true;
+                }
+            }
+            else if (arg.Equals("--hide-rating", StringComparison.OrdinalIgnoreCase) ||
+                     arg.Equals("--no-rating", StringComparison.OrdinalIgnoreCase))
+            {
+                showRating = false;
+            }
             else if (!arg.StartsWith("-") && File.Exists(arg))
             {
                 initialFile = arg;
@@ -75,6 +93,10 @@ public partial class App : Application
         }
 
         _previewWindow = await PhotoPreviewGui.MainWindow.CreateInstance();
+        if (showRating.HasValue)
+        {
+            _previewWindow.PreviewContext.ShowRating = showRating.Value;
+        }
         MainWindow = _previewWindow;
 
         if (!string.IsNullOrWhiteSpace(channelId))

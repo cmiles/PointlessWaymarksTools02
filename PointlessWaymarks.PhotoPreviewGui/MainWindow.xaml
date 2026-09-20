@@ -79,6 +79,7 @@
                           Content="Metadata (M)" ToolTip="Toggle Metadata Overlay (M)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <starRating:StarRatingControl DataContext="{Binding PreviewContext.RatingEntry}"
+                                              Visibility="{Binding DataContext.PreviewContext.ShowRating, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               VerticalAlignment="Center" Margin="8,0" ToolTip="Rating (0-5)" />
                 <Rectangle Width="1" Fill="LightGray" Margin="6,2" />
                 <CheckBox VerticalAlignment="Center" Margin="8,0"
