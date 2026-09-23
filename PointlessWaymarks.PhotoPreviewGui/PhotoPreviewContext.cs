@@ -125,11 +125,9 @@ public partial class PhotoPreviewContext
         lock (_ctsLock)
         {
             _previewCts?.Cancel();
-            _previewCts?.Dispose();
             _previewCts = null;
 
             _prefetchCts?.Cancel();
-            _prefetchCts?.Dispose();
             _prefetchCts = null;
         }
 
@@ -365,74 +363,95 @@ public partial class PhotoPreviewContext
     private async Task<PreviewCacheEntry?> GenerateCacheEntry(string fullFilePath,
         CancellationToken cancellationToken)
     {
-        var file = new FileInfo(fullFilePath);
-        if (!file.Exists) return null;
-
-        var bytes = await Task.Run(() => File.ReadAllBytes(file.FullName), cancellationToken)
-            .ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var exifRotation = GetExifRotation(bytes);
-        BitmapSource? source = null;
-
         try
         {
-            source = await Task.Run(() =>
-            {
-                using var ms = new MemoryStream(bytes);
-                var decoder = BitmapDecoder.Create(ms,
-                    BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-                if (decoder.Frames.Count > 0)
-                {
-                    var frame = decoder.Frames[0];
-                    var rotated = ApplyRotation(frame, exifRotation);
-                    if (!rotated.IsFrozen) rotated.Freeze();
-                    return rotated;
-                }
+            var file = new FileInfo(fullFilePath);
+            if (!file.Exists) return null;
 
+            if (cancellationToken.IsCancellationRequested) return null;
+
+            var bytes = await Task.Run(() => File.ReadAllBytes(file.FullName), cancellationToken)
+                .ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var exifRotation = GetExifRotation(bytes);
+            BitmapSource? source = null;
+
+            try
+            {
+                source = await Task.Run(() =>
+                {
+                    using var ms = new MemoryStream(bytes);
+                    var decoder = BitmapDecoder.Create(ms,
+                        BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    if (decoder.Frames.Count > 0)
+                    {
+                        var frame = decoder.Frames[0];
+                        var rotated = ApplyRotation(frame, exifRotation);
+                        if (!rotated.IsFrozen) rotated.Freeze();
+                        return rotated;
+                    }
+
+                    return null;
+                }, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (ObjectDisposedException)
+            {
                 return null;
-            }, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                // WIC decode failed
+            }
+
+            if (source == null) return null;
+
+            source = DetachFromDecoder(source);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var histogramImage = await Task.Run(() => GenerateHistogram(source, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var edgeOverlay = await Task.Run(() => GenerateEdgeOverlay(source, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var metadataText = ExtractCameraMetadata(fullFilePath);
+
+            var fileSizeMb = file.Length / 1024.0 / 1024.0;
+            var displayTitle =
+                $"{Path.GetFileName(fullFilePath)} — {source.PixelWidth}×{source.PixelHeight} — {fileSizeMb:N1} MB";
+
+            return new PreviewCacheEntry
+            {
+                PreviewImage = source,
+                HistogramImage = histogramImage,
+                EdgeOverlayImage = edgeOverlay,
+                DisplayTitle = displayTitle,
+                FullFilePath = fullFilePath,
+                MetadataOverlayText = metadataText
+            };
         }
         catch (OperationCanceledException)
         {
             throw;
         }
+        catch (ObjectDisposedException)
+        {
+            return null;
+        }
         catch
         {
-            // WIC decode failed
+            return null;
         }
-
-        if (source == null) return null;
-
-        source = DetachFromDecoder(source);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var histogramImage = await Task.Run(() => GenerateHistogram(source, cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var edgeOverlay = await Task.Run(() => GenerateEdgeOverlay(source, cancellationToken),
-            cancellationToken).ConfigureAwait(false);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var metadataText = ExtractCameraMetadata(fullFilePath);
-
-        var fileSizeMb = file.Length / 1024.0 / 1024.0;
-        var displayTitle =
-            $"{Path.GetFileName(fullFilePath)} — {source.PixelWidth}×{source.PixelHeight} — {fileSizeMb:N1} MB";
-
-        return new PreviewCacheEntry
-        {
-            PreviewImage = source,
-            HistogramImage = histogramImage,
-            EdgeOverlayImage = edgeOverlay,
-            DisplayTitle = displayTitle,
-            FullFilePath = fullFilePath,
-            MetadataOverlayText = metadataText
-        };
     }
 
     /// <summary>
@@ -550,6 +569,10 @@ public partial class PhotoPreviewContext
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (ObjectDisposedException)
+        {
+            return null;
         }
         catch
         {
@@ -690,6 +713,10 @@ public partial class PhotoPreviewContext
         {
             throw;
         }
+        catch (ObjectDisposedException)
+        {
+            return null;
+        }
         catch
         {
             return null;
@@ -752,6 +779,10 @@ public partial class PhotoPreviewContext
             {
                 throw;
             }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
             catch
             {
                 StatusMessage = "WIC could not decode; scanning for embedded JPEG...";
@@ -794,6 +825,10 @@ public partial class PhotoPreviewContext
                     {
                         throw;
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        return null;
+                    }
                     catch
                     {
                         // Not a valid JPEG at this offset
@@ -815,6 +850,8 @@ public partial class PhotoPreviewContext
             }
 
             source = DetachFromDecoder(source);
+
+            if (cancellationToken.IsCancellationRequested) return;
 
             PreviewImage = source;
             PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
@@ -861,6 +898,10 @@ public partial class PhotoPreviewContext
         catch (OperationCanceledException)
         {
             // Expected when a new request cancels the current one
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when a CancellationTokenSource was disposed during cancellation
         }
         catch (Exception ex)
         {
@@ -958,11 +999,9 @@ public partial class PhotoPreviewContext
         lock (_ctsLock)
         {
             _previewCts?.Cancel();
-            _previewCts?.Dispose();
             _previewCts = null;
 
             _prefetchCts?.Cancel();
-            _prefetchCts?.Dispose();
             _prefetchCts = null;
         }
 
@@ -994,7 +1033,6 @@ public partial class PhotoPreviewContext
         lock (_ctsLock)
         {
             _previewCts?.Cancel();
-            _previewCts?.Dispose();
             _previewCts = new CancellationTokenSource();
             newCts = _previewCts;
         }
@@ -1013,21 +1051,46 @@ public partial class PhotoPreviewContext
                 cached.LastAccessedTicks = Environment.TickCount64;
                 StatusContext.RunBlockingTask(async () =>
                 {
-                    await ThreadSwitcher.ResumeBackgroundAsync();
-                    IsLoading = true;
+                    try
+                    {
+                        await ThreadSwitcher.ResumeBackgroundAsync();
 
-                    PreviewImage = cached.PreviewImage;
-                    PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
-                    HistogramImage = cached.HistogramImage;
-                    EdgeOverlayImage = cached.EdgeOverlayImage;
-                    MetadataOverlayText = cached.MetadataOverlayText;
-                    DisplayTitle = cached.DisplayTitle;
-                    StatusMessage = cached.FullFilePath;
+                        if (newCts.Token.IsCancellationRequested) return;
 
-                    IsLoading = false;
-                    CleanupTempFile();
+                        IsLoading = true;
 
-                    PrefetchUpcoming(data.UpcomingFilePaths);
+                        PreviewImage = cached.PreviewImage;
+                        PreviewImageLoaded?.Invoke(this, EventArgs.Empty);
+                        HistogramImage = cached.HistogramImage;
+                        EdgeOverlayImage = cached.EdgeOverlayImage;
+                        MetadataOverlayText = cached.MetadataOverlayText;
+                        DisplayTitle = cached.DisplayTitle;
+                        StatusMessage = cached.FullFilePath;
+
+                        IsLoading = false;
+                        CleanupTempFile();
+
+                        if (!newCts.Token.IsCancellationRequested)
+                        {
+                            PrefetchUpcoming(data.UpcomingFilePaths);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Expected when a new request cancels the current one
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Expected during cancellation/disposal
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusMessage = $"Error: {ex.Message}";
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
                 });
                 return;
             }
@@ -1035,9 +1098,27 @@ public partial class PhotoPreviewContext
 
         StatusContext.RunBlockingTask(async () =>
         {
-            await GeneratePreview(data.FullFilePath, data.DisplayTitle, newCts.Token);
+            try
+            {
+                await GeneratePreview(data.FullFilePath, data.DisplayTitle, newCts.Token);
 
-            PrefetchUpcoming(data.UpcomingFilePaths);
+                if (!newCts.Token.IsCancellationRequested)
+                {
+                    PrefetchUpcoming(data.UpcomingFilePaths);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when a new request cancels the current one
+            }
+            catch (ObjectDisposedException)
+            {
+                // Expected during cancellation/disposal
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+            }
         });
     }
 
@@ -1061,46 +1142,77 @@ public partial class PhotoPreviewContext
         lock (_ctsLock)
         {
             _prefetchCts?.Cancel();
-            _prefetchCts?.Dispose();
             _prefetchCts = new CancellationTokenSource();
             newPrefetchCts = _prefetchCts;
         }
 
         EvictLruEntries();
 
-        _ = Task.Run(async () =>
+        try
         {
-            var toPrefetch = upcomingFilePaths
-                .Where(f => !_previewCache.ContainsKey(f) && File.Exists(f))
-                .ToList();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var toPrefetch = upcomingFilePaths
+                        .Where(f => !_previewCache.ContainsKey(f) && File.Exists(f))
+                        .ToList();
 
-            await Parallel.ForEachAsync(toPrefetch,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = 3,
-                    CancellationToken = newPrefetchCts.Token
-                },
-                async (filePath, ct) =>
-                {
-                    try
-                    {
-                        var entry = await GenerateCacheEntry(filePath, ct);
-                        if (entry != null)
+                    if (newPrefetchCts.Token.IsCancellationRequested) return;
+
+                    await Parallel.ForEachAsync(toPrefetch,
+                        new ParallelOptions
                         {
-                            _previewCache.TryAdd(filePath, entry);
-                            EvictLruEntries();
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Expected during cancellation
-                    }
-                    catch
-                    {
-                        // Prefetch failures are non-critical
-                    }
-                });
-        }, newPrefetchCts.Token);
+                            MaxDegreeOfParallelism = 3,
+                            CancellationToken = newPrefetchCts.Token
+                        },
+                        async (filePath, ct) =>
+                        {
+                            try
+                            {
+                                var entry = await GenerateCacheEntry(filePath, ct);
+                                if (entry != null)
+                                {
+                                    _previewCache.TryAdd(filePath, entry);
+                                    EvictLruEntries();
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // Expected during cancellation
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // Expected during cancellation/disposal
+                            }
+                            catch
+                            {
+                                // Prefetch failures are non-critical
+                            }
+                        });
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during cancellation
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Expected during cancellation/disposal
+                }
+                catch
+                {
+                    // Prefetch failures are non-critical
+                }
+            }, newPrefetchCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during cancellation
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected during cancellation/disposal
+        }
     }
 
     /// <summary>
