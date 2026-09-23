@@ -66,7 +66,7 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         return metadataWindow;
     }
 
-    public static FileBuilder FileMetadataMapDocument(string title, MetadataLocation location, string styleBlock = "",
+    public static async Task<FileBuilder> FileMetadataMapDocument(string title, MetadataLocation location, string styleBlock = "",
         string javascript = "",
         string serializedMapIcons = "", string bodyContent = "")
     {
@@ -79,12 +79,15 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
                               <meta name="viewport" content="width=device-width, initial-scale=1.0">
                               <title>{{{HtmlEncoder.Default.Encode(title)}}}</title>
                               <link rel="stylesheet" href="https://[[VirtualDomain]]/pure.css" />
-                              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+                              <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.css" />
                               <link rel="stylesheet" href="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.css">
-                              <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
-                              <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                              <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
-                                              <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
+                              
+                            <script src="https://[[VirtualDomain]]/leaflet.js"></script>
+                            <script src="https://[[VirtualDomain]]/esri-leaflet.js"></script>
+                            <script src="https://[[VirtualDomain]]/chart.umd.min.js"></script>
+
+                            <script src="https://[[VirtualDomain]]/leaflet.awesome-svg-markers.js"></script>
+                            <script src="https://[[VirtualDomain]]/localMapCommon.js"></script>
                                 {{{(string.IsNullOrWhiteSpace(styleBlock) ? string.Empty : """<link rel="stylesheet" href="https://[[VirtualDomain]]/customStyle.css" />""")}}}
                                 {{{(string.IsNullOrWhiteSpace(javascript) ? string.Empty : """<script src="https://[[VirtualDomain]]/customScript.js"></script>""")}}}
                             </head>
@@ -108,11 +111,24 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customStyle.css", styleBlock));
         if (!string.IsNullOrWhiteSpace(javascript))
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customScript.js", javascript));
+        
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("pure.css", await HtmlTools.PureCssAsString()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("leaflet.css",
+            WpfHtmlResourcesHelper.LeafletCss()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("leaflet.js",
+            WpfHtmlResourcesHelper.LeafletJs()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("esri-leaflet.js",
+            WpfHtmlResourcesHelper.ErsiLeafletJs()));
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("chart.umd.min.js",
+            WpfHtmlResourcesHelper.ChartJs()));
+
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("localMapCommon.js",
             WpfHtmlResourcesHelper.LocalMapCommonJs()));
         initialWebFilesMessage.Create.AddRange(WpfHtmlResourcesHelper.AwesomeMapSvgMarkers());
-        if (!string.IsNullOrWhiteSpace(serializedMapIcons))
-            initialWebFilesMessage.Create.Add(new FileBuilderCreate("pwMapSvgIcons.json", serializedMapIcons));
+        initialWebFilesMessage.Create.AddRange(WpfHtmlResourcesHelper.LeafletImages());
+
+        initialWebFilesMessage.Create.Add(new FileBuilderCreate("pwMapSvgIcons.json", serializedMapIcons));
+
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("Index.html", htmlString, true));
 
         return initialWebFilesMessage;
@@ -227,7 +243,7 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         if (location.HasValidLocation())
         {
             var initialWebFilesMessage =
-                FileMetadataMapDocument($"Metadata: {fileName}", location, bodyContent: fileMetadataHtml);
+                await FileMetadataMapDocument($"Metadata: {fileName}", location, bodyContent: fileMetadataHtml);
 
             var startingPoint = PointTools.Wgs84Point(location.Longitude!.Value, location.Latitude!.Value, 0);
 
