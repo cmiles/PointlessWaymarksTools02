@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json.Nodes;
+using System.Windows;
+using GongSolutions.Wpf.DragDrop;
 using MetadataExtractor;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
@@ -22,7 +24,8 @@ namespace PointlessWaymarks.WpfCommon.FileMetadataDisplay;
 ///     Interaction logic for FileMetadataDisplayWindow.xaml
 /// </summary>
 [NotifyPropertyChanged]
-public partial class FileMetadataDisplayWindow : IWebViewMessenger
+[GenerateStatusCommands]
+public partial class FileMetadataDisplayWindow : IWebViewMessenger, IDropTarget
 {
     public FileMetadataDisplayWindow(StatusControlContext statusContext,
         string windowTitle)
@@ -30,6 +33,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         InitializeComponent();
 
         StatusContext = statusContext;
+
+        BuildCommands();
 
         FromWebView = new WorkQueue<FromWebViewMessage>
         {
@@ -44,6 +49,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
     }
 
     public string FfprobeExe { get; set; } = string.Empty;
+    public string? FilePathAndName { get; set; }
+    public string? FileName { get; set; }
     public SpatialBounds? MapBounds { get; set; }
     public StatusControlContext StatusContext { get; set; }
     public string WindowTitle { get; set; }
@@ -66,7 +73,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         return metadataWindow;
     }
 
-    public static async Task<FileBuilder> FileMetadataMapDocument(string title, MetadataLocation location, string styleBlock = "",
+    public static async Task<FileBuilder> FileMetadataMapDocument(string title, MetadataLocation location,
+        string styleBlock = "",
         string javascript = "",
         string serializedMapIcons = "", string bodyContent = "")
     {
@@ -111,7 +119,7 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customStyle.css", styleBlock));
         if (!string.IsNullOrWhiteSpace(javascript))
             initialWebFilesMessage.Create.Add(new FileBuilderCreate("customScript.js", javascript));
-        
+
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("pure.css", await HtmlTools.PureCssAsString()));
         initialWebFilesMessage.Create.Add(new FileBuilderCreate("leaflet.css",
             WpfHtmlResourcesHelper.LeafletCss()));
@@ -179,8 +187,63 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
             await statusContext.ToastSuccess("Metadata Report Completed.");
     }
 
+    void IDropTarget.DragOver(IDropInfo dropInfo)
+    {
+        dropInfo.Effects = DragDropEffects.Copy;
+    }
+
+    void IDropTarget.Drop(IDropInfo dropInfo)
+    {
+        var files = DragAndDropFilesHelper.DroppedFiles(dropInfo, FileLocationTools.TempStorageDirectory(), true);
+        var supportedFile = files.FirstOrDefault(x =>
+            FileMetadataTools.ExifToolWriteSupportedExtensions.Contains(Path.GetExtension(x),
+                StringComparer.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(supportedFile))
+        {
+            StatusContext.RunBlockingTask(async () => await LoadData(supportedFile));
+            return;
+        }
+
+        string textToProcess;
+        var data = dropInfo.Data;
+        textToProcess = data switch
+        {
+            string stringData => stringData,
+            IDataObject dataObject when dataObject.GetDataPresent(DataFormats.UnicodeText) =>
+                dataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty,
+            IDataObject dataObject when dataObject.GetDataPresent(DataFormats.Text) =>
+                dataObject.GetData(DataFormats.Text) as string ?? string.Empty,
+            IDataObject dataObject when dataObject.GetDataPresent(DataFormats.StringFormat) =>
+                dataObject.GetData(DataFormats.StringFormat) as string ?? string.Empty,
+            _ => data?.ToString() ?? string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(textToProcess)) return;
+
+        var possiblePath = textToProcess.Trim().Trim('"', '\'');
+        if (File.Exists(possiblePath))
+        {
+            StatusContext.RunBlockingTask(async () => await LoadData(possiblePath));
+            return;
+        }
+
+        var lines = textToProcess.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var loopLine in lines)
+        {
+            var lineCandidate = loopLine.Trim().Trim('"', '\'');
+            if (File.Exists(lineCandidate))
+            {
+                StatusContext.RunBlockingTask(async () => await LoadData(lineCandidate));
+                return;
+            }
+        }
+    }
+
     public async Task LoadData(string fileName)
     {
+        WindowTitle = string.IsNullOrWhiteSpace(fileName) ? "File Metadata Report" : $"Metadata - {fileName}";
+
         if (string.IsNullOrWhiteSpace(fileName))
         {
             await this.SetupDocumentWithMinimalCss(
@@ -197,6 +260,11 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         }
 
         var file = new FileInfo(fileName);
+        
+        FilePathAndName = file.FullName;
+        FileName = file.Name;
+        FileDirectory = file.DirectoryName;
+        
         var fileMetadataHtml = await FileMetadataReport.AllFileMetadataToHtml(file, FfprobeExe);
 
         MetadataLocation location;
@@ -286,6 +354,8 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         }
     }
 
+    public string? FileDirectory { get; set; }
+
     private async Task MapMessageReceived(string mapMessage)
     {
         await ThreadSwitcher.ResumeBackgroundAsync();
@@ -331,6 +401,66 @@ public partial class FileMetadataDisplayWindow : IWebViewMessenger
         if (!string.IsNullOrWhiteSpace(args.Message))
             StatusContext.RunFireAndForgetNonBlockingTask(async () => await MapMessageReceived(args.Message));
         return Task.CompletedTask;
+    }
+
+    [NonBlockingCommand]
+    public async Task CopyFilenameToClipboard()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        if (string.IsNullOrWhiteSpace(FilePathAndName))
+        {
+            await StatusContext.ToastWarning("No File?");
+            return;
+        }
+
+        await ThreadSwitcher.ResumeForegroundAsync();
+
+        Clipboard.SetText(FilePathAndName);
+
+        await StatusContext.ToastSuccess($"To Clipboard {FilePathAndName}");
+    }
+
+    [NonBlockingCommand]
+    public async Task OpenDirectory()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        if (string.IsNullOrWhiteSpace(FilePathAndName))
+        {
+            await StatusContext.ToastWarning("No File?");
+            return;
+        }
+
+        if (!File.Exists(FilePathAndName))
+        {
+            await StatusContext.ToastError($"File '{FilePathAndName}' does not exist?");
+            return;
+        }
+
+        await ProcessHelpers.OpenExplorerWindowForFile(FilePathAndName);
+    }
+
+    [NonBlockingCommand]
+    public async Task OpenFile()
+    {
+        await ThreadSwitcher.ResumeBackgroundAsync();
+
+        if (string.IsNullOrWhiteSpace(FilePathAndName))
+        {
+            await StatusContext.ToastWarning("No File?");
+            return;
+        }
+
+        if (!File.Exists(FilePathAndName))
+        {
+            await StatusContext.ToastError($"File '{FilePathAndName}' does not exist?");
+            return;
+        }
+
+        await ThreadSwitcher.ResumeForegroundAsync();
+
+        ProcessTools.Open(FilePathAndName);
     }
 
     public async Task ShowMarker(double markerLatitude, double markerLongitude)

@@ -4,27 +4,98 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dd="urn:gong-wpf-dragdrop"
     xmlns:local="clr-namespace:PointlessWaymarks.WpfCommon.FileMetadataDisplay"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:status="clr-namespace:PointlessWaymarks.WpfCommon.Status"
+    xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
     xmlns:webViewVirtualDomain="clr-namespace:PointlessWaymarks.WpfCommon.WebViewVirtualDomain"
     xmlns:windowScreenShot="clr-namespace:PointlessWaymarks.WpfCommon.WindowScreenShot"
     xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
     Title="{Binding WindowTitle}"
     Width="900"
     Height="700"
+    dd:DragDrop.DropHandler="{Binding}"
+    dd:DragDrop.IsDropTarget="True"
     d:DataContext="{d:DesignInstance local:FileMetadataDisplayWindow}"
     mc:Ignorable="d">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../WpfCommonResourceDictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
-        <wpf:WebView2CompositionControl Grid.Row="0" Grid.Column="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <Button
+                    Width="28"
+                    Height="28"
+                    Margin="2"
+                    Padding="4"
+                    Command="{Binding OpenDirectoryCommand}"
+                    ToolTip="Open Directory in Explorer">
+                    <Image
+                        Source="{svgc:SvgImage Source=/Icons/folder-file-outline.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                </Button>
+                <Button
+                    Width="28"
+                    Height="28"
+                    Margin="2"
+                    Padding="4"
+                    Command="{Binding OpenFileCommand}"
+                    ToolTip="Open File">
+                    <Image
+                        Source="{svgc:SvgImage Source=/Icons/file-code-outline.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                </Button>
+                <Button
+                    Width="28"
+                    Height="28"
+                    Margin="2"
+                    Padding="4"
+                    Command="{Binding CopyFilenameToClipboardCommand}"
+                    ToolTip="Copy Filename to Clipboard">
+                    <Image Source="{svgc:SvgImage Source=/Icons/content-copy.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                </Button>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBox
+                    Margin="8,0,8,0"
+                    VerticalAlignment="Center"
+                    BorderThickness="0"
+                    IsReadOnly="True"
+                    Text="{Binding FileName}" />
+                <TextBox
+                    Margin="4,0,8,0"
+                    VerticalAlignment="Center"
+                    BorderThickness="0"
+                    IsReadOnly="True"
+                    Text="{Binding FilePathAndName}" />
+            </StackPanel>
+        </Grid>
+        <wpf:WebView2CompositionControl Grid.Row="1">
             <b:Interaction.Behaviors>
-                <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior RedirectExternalLinksToBrowser="True" WebViewMessenger="{Binding .}" />
+                <webViewVirtualDomain:WebViewGeneratedVirtualDomainBehavior RedirectExternalLinksToBrowser="True"
+                                                                            WebViewMessenger="{Binding .}" />
             </b:Interaction.Behaviors>
         </wpf:WebView2CompositionControl>
         <windowScreenShot:WindowScreenShotControl
             Margin="4"
+            Grid.Row="1"
             HorizontalContentAlignment="Left"
             VerticalContentAlignment="Bottom" />
-        <status:StatusControl d:IsHidden="true" DataContext="{Binding StatusContext}" />
+        <status:StatusControl
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            d:IsHidden="true" DataContext="{Binding StatusContext}" />
     </Grid>
 </Window>

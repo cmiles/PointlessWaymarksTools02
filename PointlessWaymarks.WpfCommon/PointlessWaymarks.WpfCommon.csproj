@@ -18,6 +18,7 @@
         <None Remove="Icons\arrow-up.svg" />
         <None Remove="Icons\camera-outline.svg" />
         <None Remove="Icons\close.svg" />
+        <None Remove="Icons\content-copy.svg" />
         <None Remove="Icons\file-code-outline.svg" />
         <None Remove="Icons\file-jpg-box.svg" />
         <None Remove="Icons\folder-file-outline.svg" />
@@ -116,6 +117,7 @@
         <Resource Include="Icons\arrow-up.svg" />
         <Resource Include="Icons\camera-outline.svg" />
         <Resource Include="Icons\close.svg" />
+        <Resource Include="Icons\content-copy.svg" />
         <Resource Include="Icons\file-code-outline.svg" />
         <Resource Include="Icons\file-jpg-box.svg" />
         <Resource Include="Icons\folder-file-outline.svg" />

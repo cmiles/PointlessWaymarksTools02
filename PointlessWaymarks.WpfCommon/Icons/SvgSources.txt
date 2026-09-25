@@ -8,6 +8,7 @@ arrow-up - Austin Andrews - https://pictogrammers.com/library/mdi/icon/arrow-up
 arrow-up-thick - Austin Andrews - https://pictogrammers.com/library/mdi/icon/arrow-up-thick
 camera-outline - Google - https://pictogrammers.com/library/mdi/icon/camera-outline
 close - Google - https://pictogrammers.com/library/mdi/icon/close/
+content-copy - Google - https://pictogrammers.com/library/mdi/icon/content-copy/
 file-code-outline - Terren - https://pictogrammers.com/library/mdi/icon/file-code-outline/
 file-jpg-box - Michael Irigoyen - https://pictogrammers.com/library/mdi/icon/file-jpg-box/
 folder-file-outline - Colton Wiscombe - https://pictogrammers.com/library/mdi/icon/folder-file-outline/
