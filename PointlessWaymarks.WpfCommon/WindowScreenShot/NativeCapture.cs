@@ -9,10 +9,15 @@
 
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using Ookii.Dialogs.Wpf;
+using PointlessWaymarks.WpfCommon.Status;
+using SkiaSharp;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
@@ -137,5 +142,74 @@ public static class NativeCapture
     public static async Task<bool> TryWindowScreenShotToClipboardAsync(Window x)
     {
         return await TryCopyBitmapSourceToClipboard(CaptureWindow(x));
+    }
+
+    public static async Task<string?> TrySaveActiveWindowScreenShotToJpegAsync(
+        StatusControlContext? statusContext = null)
+    {
+        return await TrySaveBitmapToJpegFileAsync(CaptureActiveWindow(), statusContext);
+    }
+
+    public static async Task<string?> TrySaveWindowScreenShotToJpegAsync(Window x,
+        StatusControlContext? statusContext = null)
+    {
+        return await TrySaveBitmapToJpegFileAsync(CaptureWindow(x), statusContext);
+    }
+
+    public static async Task<string?> TryWindowScreenShotToJpegAsync(Window x,
+        StatusControlContext? statusContext = null)
+    {
+        return await TrySaveWindowScreenShotToJpegAsync(x, statusContext);
+    }
+
+    public static async Task<string?> TrySaveBitmapToJpegFileAsync(Bitmap bmpCopied,
+        StatusControlContext? statusContext = null)
+    {
+        using (bmpCopied)
+        {
+            await ThreadSwitcher.ResumeForegroundAsync();
+
+            var saveDialog = new VistaSaveFileDialog
+            {
+                Filter = "jpg files (*.jpg;*.jpeg)|*.jpg;*.jpeg",
+                DefaultExt = "jpg",
+                AddExtension = true,
+                OverwritePrompt = true
+            };
+
+            if (!saveDialog.ShowDialog() ?? true) return null;
+
+            var newFilename = saveDialog.FileName;
+
+            if (!(Path.GetExtension(newFilename).Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                  Path.GetExtension(newFilename).Equals(".jpeg", StringComparison.OrdinalIgnoreCase)))
+                newFilename += ".jpg";
+
+            try
+            {
+                await ThreadSwitcher.ResumeBackgroundAsync();
+
+                using var memoryStream = new MemoryStream();
+                bmpCopied.Save(memoryStream, ImageFormat.Png);
+                memoryStream.Position = 0;
+                using var skBitmap = SKBitmap.Decode(memoryStream);
+                using var skImage = SKImage.FromBitmap(skBitmap);
+                using var data = skImage.Encode(SKEncodedImageFormat.Jpeg, 100);
+
+                await using var fileStream = new FileStream(newFilename, FileMode.Create, FileAccess.Write);
+                data.SaveTo(fileStream);
+
+                if (statusContext != null)
+                    await statusContext.ToastSuccess($"Screenshot saved to {newFilename}");
+
+                return newFilename;
+            }
+            catch (Exception ex)
+            {
+                if (statusContext != null)
+                    await statusContext.ToastError($"Problem saving Screenshot: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

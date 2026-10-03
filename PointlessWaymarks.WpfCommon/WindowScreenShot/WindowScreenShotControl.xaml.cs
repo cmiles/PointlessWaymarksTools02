@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using PointlessWaymarks.LlamaAspects;
 using PointlessWaymarks.WpfCommon.Status;
@@ -19,6 +20,8 @@ public partial class WindowScreenShotControl
         {
             if (x == null) return;
 
+            var isCtrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+
             StatusControlContext? statusContext = null;
 
             try
@@ -30,14 +33,21 @@ public partial class WindowScreenShotControl
                 Console.WriteLine(e);
             }
 
-            var result = await NativeCapture.TryWindowScreenShotToClipboardAsync(x);
-
-            if (statusContext != null)
+            if (isCtrl)
             {
-                if (!result)
-                    await statusContext.ToastError("Problem Copying Window to Clipboard");
-                else
-                    await statusContext.ToastSuccess("Copied to Clipboard");
+                await NativeCapture.TrySaveWindowScreenShotToJpegAsync(x, statusContext);
+            }
+            else
+            {
+                var result = await NativeCapture.TryWindowScreenShotToClipboardAsync(x);
+
+                if (statusContext != null)
+                {
+                    if (!result)
+                        await statusContext.ToastError("Problem Copying Window to Clipboard");
+                    else
+                        await statusContext.ToastSuccess("Copied to Clipboard");
+                }
             }
         });
 

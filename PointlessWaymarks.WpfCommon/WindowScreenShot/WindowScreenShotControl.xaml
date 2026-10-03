@@ -26,13 +26,14 @@
             VerticalAlignment="Center"
             Command="{Binding WindowScreenShotCommand}"
             CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
-            Opacity=".4">
+            Opacity=".4"
+            ToolTip="Take Screen Shot of Application - Ctrl+Click to Save as Jpeg">
             <Image
                 Width="{StaticResource SmallIconSize}"
                 VerticalAlignment="Center"
                 Source="{svgc:SvgImage Source=/Icons/camera-outline.svg,
                                        AppName=PointlessWaymarks.WpfCommon}"
-                ToolTip="Take Screen Shot of Application" />
+                ToolTip="Take Screen Shot of Application - Ctrl+Click to Save as Jpeg" />
         </Button>
     </Grid>
 </UserControl>
