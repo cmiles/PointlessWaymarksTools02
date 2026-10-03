@@ -12,92 +12,93 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
         Title="Web Page - Jpeg Image Window" Height="650" Width="800">
-        <Window.Resources>
-            <ResourceDictionary>
-                <ResourceDictionary.MergedDictionaries>
-                    <ResourceDictionary Source="/PointlessWaymarks.WpfCommon;component/ClassicGreenResourceDictionary.xaml" />
-                </ResourceDictionary.MergedDictionaries>
-            </ResourceDictionary>
-        </Window.Resources>
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Border
-          Margin="4"
-          BorderBrush="LightGray"
-          BorderThickness="2"
-          CornerRadius="4">
-                <Grid Margin="4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="160" />
-                        <ColumnDefinition Width="160" />
-                    </Grid.ColumnDefinitions>
-                    <Label
-                  Margin="4,4,4,0"
-                  VerticalAlignment="Center"
-                  FontWeight="Bold"
-                  Target="{Binding ElementName=UrlTextBox}">
-                        URL:
-                    </Label>
-                    <TextBox
-                  Name="UrlTextBox"
-                  Grid.Column="1"
-                  Margin="4,0,4,0"
-                  VerticalContentAlignment="Center"
-                  AcceptsReturn="False"
-                  KeyDown="UrlTextBox_KeyDown"
-                  Text="{Binding UserUrl, UpdateSourceTrigger=Explicit}"
-                  TextAlignment="Left" />
-                    <Button
-                  Grid.Column="2"
-                  Padding="12,4,12,4"
-                  HorizontalAlignment="Stretch"
-                  VerticalAlignment="Stretch"
-                  Click="ButtonNavigate_OnClick">
-                        Navigate
-                    </Button>
-                    <Button
-                  Grid.Column="3"
-                  Margin="4,0,0,0"
-                  Padding="24,4,24,4"
-                  HorizontalAlignment="Stretch"
-                  VerticalAlignment="Stretch"
-                  Command="{Binding SaveCurrentPageAsJpegCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{svgc:SvgImage Source=/Icons/file-jpg-box.svg, AppName=PointlessWaymarks.WpfCommon}" />
-                            <TextBlock Margin="8,0,0,0">Save as Jpeg</TextBlock>
-                        </StackPanel>
-                    </Button>
-                </Grid>
-            </Border>
-            <Border
-          Grid.Row="1"
-          Margin="4,0,4,4"
-          BorderBrush="LightGray"
-          BorderThickness="2"
-          CornerRadius="4">
-                <wpf:WebView2CompositionControl
-              x:Name="WebContentWebView"
-              Margin="4"
-              Source="{Binding UserUrl, TargetNullValue='about:blank'}">
-                    <b:Interaction.Behaviors>
-                        <behaviors:WebViewToJpgFunctionInjection JpgScreenshotFunctionName="JpgScreenshotFunction" />
-                    </b:Interaction.Behaviors>
-                </wpf:WebView2CompositionControl>
-            </Border>
-            <windowScreenShot:WindowScreenShotControl
-          Grid.Row="1"
-          Grid.Column="0"
-          HorizontalContentAlignment="Right"
-          VerticalContentAlignment="Bottom" />
-            <status:StatusControl
-          Grid.Row="0"
-          Grid.RowSpan="2"
-          d:IsHidden="true"
-          DataContext="{Binding StatusContext}" />
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/PointlessWaymarks.WpfCommon;component/ClassicGreenResourceDictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border
+            Margin="4"
+            BorderBrush="LightGray"
+            BorderThickness="2"
+            CornerRadius="4">
+            <Grid Margin="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="160" />
+                </Grid.ColumnDefinitions>
+                <Label
+                    Margin="4,4,4,0"
+                    VerticalAlignment="Center"
+                    FontWeight="Bold"
+                    Target="{Binding ElementName=UrlTextBox}">
+                    URL:
+                </Label>
+                <TextBox
+                    Name="UrlTextBox"
+                    Grid.Column="1"
+                    Margin="4,0,4,0"
+                    VerticalContentAlignment="Center"
+                    AcceptsReturn="False"
+                    KeyDown="UrlTextBox_KeyDown"
+                    Text="{Binding UserUrl, UpdateSourceTrigger=Explicit}"
+                    TextAlignment="Left" />
+                <Button
+                    Grid.Column="2"
+                    Padding="12,4,12,4"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Click="ButtonNavigate_OnClick">
+                    Navigate
+                </Button>
+                <Button
+                    Grid.Column="3"
+                    Margin="4,0,0,0"
+                    Padding="24,4,24,4"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Command="{Binding SaveCurrentPageAsJpegCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <Image
+                            Source="{svgc:SvgImage Source=/Icons/file-jpg-box.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                        <TextBlock Margin="8,0,0,0">Save as Jpeg</TextBlock>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+        <Border
+            Grid.Row="1"
+            Margin="4,0,4,4"
+            BorderBrush="LightGray"
+            BorderThickness="2"
+            CornerRadius="4">
+            <wpf:WebView2CompositionControl
+                x:Name="WebContentWebView"
+                Margin="4"
+                Source="{Binding UserUrl, TargetNullValue='about:blank'}">
+                <b:Interaction.Behaviors>
+                    <behaviors:WebViewToJpgFunctionInjection JpgScreenshotFunctionName="JpgScreenshotFunction" />
+                </b:Interaction.Behaviors>
+            </wpf:WebView2CompositionControl>
+        </Border>
+        <windowScreenShot:WindowScreenShotControl
+            Grid.Row="1"
+            Grid.Column="0"
+            HorizontalContentAlignment="Left"
+            VerticalContentAlignment="Bottom" />
+        <status:StatusControl
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            d:IsHidden="true"
+            DataContext="{Binding StatusContext}" />
     </Grid>
 </Window>
