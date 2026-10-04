@@ -207,7 +207,7 @@ public static class ExifToolWriter
 
                     var args = BuildArguments(request, file);
 
-                    argsFilePath = Path.Combine(Path.GetTempPath(), $"exiftool-args-{Guid.NewGuid():N}.txt");
+                    argsFilePath = Path.Combine(FileLocationTools.TempStorageDirectorySubdirectory().FullName, $"exiftool-args-{Guid.NewGuid():N}.txt");
                     await File.WriteAllLinesAsync(argsFilePath, args, new UTF8Encoding(false));
 
                     progress?.Report(GetCommandLinePreview(exifToolExe, request, file));

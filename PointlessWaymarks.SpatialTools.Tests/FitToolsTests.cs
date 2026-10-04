@@ -2,6 +2,7 @@ using System.Xml;
 using Dynastream.Fit;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using PointlessWaymarks.CommonTools;
 using PointlessWaymarks.GeoTaggingService;
 using PointlessWaymarks.SpatialTools;
 using DateTime = System.DateTime;
@@ -18,7 +19,7 @@ public class FitToolsTests
     [SetUp]
     public void SetUp()
     {
-        _testDir = Path.Combine(Path.GetTempPath(), "FitToolsTests_" + Guid.NewGuid().ToString("N"));
+        _testDir = Path.Combine(FileLocationTools.TempStorageDirectorySubdirectory().FullName, "FitToolsTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_testDir);
     }
 

@@ -590,6 +590,20 @@ public static class FileLocationTools
         return directory;
     }
 
+    public static DirectoryInfo TempStorageDirectorySubdirectory()
+    {
+        var parentDirectory = TempStorageDirectory();
+
+        var subDirectory = new DirectoryInfo(Path.Combine(parentDirectory.FullName,
+            $"{DateTime.Now:yyyy-MM-dd-HH-mm}--{SlugTagTools.RandomLowerCaseSaferString(4)}"));
+
+        if (!subDirectory.Exists) subDirectory.Create();
+
+        subDirectory.Refresh();
+
+        return subDirectory;
+    }
+
     public static DirectoryInfo TempStorageWebViewVirtualDomainDirectory()
     {
         var directory = new DirectoryInfo(Path.Combine(DefaultStorageDirectory().FullName, "WebViewVirtualHtml"));
