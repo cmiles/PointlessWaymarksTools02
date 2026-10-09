@@ -16,12 +16,11 @@ public static class ElevationGuiHelper
     /// <param name="longitude"></param>
     /// <param name="statusContext"></param>
     /// <returns></returns>
-    public static async Task<double?> GetElevation(double latitude, double longitude,
-        StatusControlContext statusContext)
+    public static async Task<double?> GetElevation(double latitude, double longitude, StatusControlContext statusContext)
     {
         try
         {
-            var elevationResult = await ElevationService.OpenTopoNedElevation(latitude,
+            var elevationResult = await ElevationService.Elevation(latitude,
                 longitude, statusContext.ProgressTracker());
 
             if (elevationResult != null)
@@ -39,7 +38,7 @@ public static class ElevationGuiHelper
 
         try
         {
-            var elevationResult = await ElevationService.OpenTopoMapZenElevation(latitude,
+            var elevationResult = await ElevationService.Elevation(latitude,
                 longitude, statusContext.ProgressTracker());
 
             if (elevationResult == null)

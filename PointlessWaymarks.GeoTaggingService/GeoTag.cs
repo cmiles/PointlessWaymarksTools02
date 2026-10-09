@@ -183,9 +183,8 @@ public class GeoTag
             else
                 try
                 {
-                    elevation = await ElevationService.OpenTopoNedElevation(closest.Waypoint.Latitude,
-                        closest.Waypoint.Longitude,
-                        progress);
+                    elevation = await ElevationService.Elevation(closest.Waypoint.Latitude,
+                        closest.Waypoint.Longitude, progress);
                 }
                 catch (Exception e)
                 {

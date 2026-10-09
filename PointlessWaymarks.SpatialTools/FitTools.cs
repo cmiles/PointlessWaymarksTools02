@@ -254,8 +254,7 @@ public static class FitTools
         return TrackInformationFromFitFile(fitFile, progress);
     }
 
-    public static async Task<GpsTrackInformation?> TrackInformationFromFitFile(FileInfo fitFile,
-        IProgress<string>? progress = null)
+    public static async Task<GpsTrackInformation?> TrackInformationFromFitFile(FileInfo fitFile, IProgress<string>? progress = null)
     {
         if (fitFile is not { Exists: true }) return null;
 
@@ -407,8 +406,7 @@ public static class FitTools
         }).ConfigureAwait(false);
     }
 
-    public static Task<GpsTrackInformation?> TrackInformationSimplifiedFromFit(FileInfo fitFile,
-        IProgress<string>? progress = null)
+    public static Task<GpsTrackInformation?> TrackInformationSimplifiedFromFit(FileInfo fitFile, IProgress<string>? progress = null)
     {
         return TrackInformationSimplifiedFromFitFile(fitFile, progress);
     }
@@ -423,7 +421,7 @@ public static class FitTools
     /// <param name="fitFile"></param>
     /// <param name="progress"></param>
     /// <returns></returns>
-    public static async Task<GpsTrackInformation?> TrackInformationSimplifiedFromFitFile(FileInfo fitFile,
+    public static async Task<GpsTrackInformation?> TrackInformationSimplifiedFromFitFile(FileInfo fitFile, 
         IProgress<string>? progress = null)
     {
         if (fitFile is not { Exists: true }) return null;
@@ -527,7 +525,7 @@ public static class FitTools
         // --- 2. FETCH MISSING ELEVATIONS VIA SERVICE ---
         if (pointsRequiringElevation.Count > 0)
         {
-            var updatedPoints = await ElevationService.OpenTopoNedElevation(pointsRequiringElevation, null);
+            var updatedPoints = await ElevationService.Elevation(pointsRequiringElevation, progress);
 
             if (updatedPoints.Count == pointsRequiringElevation.Count)
                 for (var i = 0; i < pointsRequiringElevation.Count; i++)
@@ -692,8 +690,7 @@ public static class FitTools
         return TrackLineSimplifiedFromFitFileBuffered(fitFile, bufferInFeet, progress);
     }
 
-    public static async Task<Feature?> TrackLineSimplifiedFromFitFile(FileInfo fitFile,
-        IProgress<string>? progress = null)
+    public static async Task<Feature?> TrackLineSimplifiedFromFitFile(FileInfo fitFile, IProgress<string>? progress = null)
     {
         var trackInfo = await TrackInformationSimplifiedFromFitFile(fitFile, progress).ConfigureAwait(false);
         return trackInfo == null ? null : LineFeatureFromFitTrack(trackInfo);

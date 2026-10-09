@@ -136,8 +136,7 @@ public static class GeoJsonTools
     }
 
 
-    public static async Task<string> ReplaceElevationsInGeoJsonWithLineString(string geoJson,
-        IProgress<string>? progress = null)
+    public static async Task<string> ReplaceElevationsInGeoJsonWithLineString(string geoJson, IProgress<string>? progress = null)
     {
         if (string.IsNullOrWhiteSpace(geoJson)) return string.Empty;
 

@@ -179,7 +179,7 @@ public static class FileMetadataXmpSidecarTools
             toReturn is { Latitude: not null, Longitude: not null })
             try
             {
-                toReturn.Elevation = await ElevationService.OpenTopoNedElevation(toReturn.Latitude.Value,
+                toReturn.Elevation = await ElevationService.Elevation(toReturn.Latitude.Value,
                     toReturn.Longitude.Value, progress);
             }
             catch (Exception e)

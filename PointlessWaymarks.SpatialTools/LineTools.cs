@@ -84,7 +84,7 @@ public static class LineTools
         bool replaceElevations, IProgress<string>? progress = null)
     {
         if (replaceElevations)
-            await ElevationService.OpenTopoMapZenElevation(pointList, progress)
+            await ElevationService.Elevation(pointList, progress)
                 .ConfigureAwait(false);
 
         // ReSharper disable once CoVariantArrayConversion It appears from testing that a linestring will reflect CoordinateZ
