@@ -210,7 +210,21 @@ public static class WebViewToJpg
             }
 
             progress?.Report("Capturing Screenshot via DevTools Protocol");
-            var captureParams = """{"format": "jpeg", "quality": 95, "fromSurface": true}""";
+            var captureParams = $$"""
+                {
+                    "format": "jpeg",
+                    "quality": 95,
+                    "fromSurface": true,
+                    "captureBeyondViewport": true,
+                    "clip": {
+                        "x": 0,
+                        "y": 0,
+                        "width": {{documentWidthCssPixels}},
+                        "height": {{documentHeightCssPixels}},
+                        "scale": 1
+                    }
+                }
+                """;
             var captureResultJson = await webContentWebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Page.captureScreenshot", captureParams);
             using var captureDoc = JsonDocument.Parse(captureResultJson);
             if (captureDoc.RootElement.TryGetProperty("data", out var dataProp))
@@ -303,21 +317,25 @@ public static class WebViewToJpg
         if (capturedImageBytes is null || capturedImageBytes.Length == 0)
         {
             progress?.Report(
-                $"Current Top {viewPortTopUserPosition}, Left {viewPortLeftUserPosition} - Turning off Overflow");
+                $"Current Top {viewPortTopUserPosition}, Left {viewPortLeftUserPosition} - Disabling Smooth Scrolling and Hiding Scrollbars");
 
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                "document.querySelector('body').style.overflowY='visible'");
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                "document.querySelector('body').style.overflow='hidden'");
+            await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
+                var style = document.createElement('style');
+                style.id = 'pwt-screenshot-override-style';
+                style.innerHTML = '* { scroll-behavior: auto !important; } html { scroll-behavior: auto !important; } body { scroll-behavior: auto !important; } ::-webkit-scrollbar { display: none !important; }';
+                document.head.appendChild(style);
+                if (document.documentElement) document.documentElement.style.scrollBehavior = 'auto';
+                if (document.body) document.body.style.scrollBehavior = 'auto';
+                """);
 
             var documentHeightArray = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
                 """
                 [
-                    document.documentElement.clientHeight,
+                    document.documentElement ? document.documentElement.clientHeight : 0,
                     document.body ? document.body.scrollHeight : 0,
-                    document.documentElement.scrollHeight,
+                    document.documentElement ? document.documentElement.scrollHeight : 0,
                     document.body ? document.body.offsetHeight : 0,
-                    document.documentElement.offsetHeight
+                    document.documentElement ? document.documentElement.offsetHeight : 0
                 ]
                 """);
             var documentHeightCssPixels = JsonSerializer.Deserialize<List<int>>(documentHeightArray)!.Max();
@@ -325,11 +343,11 @@ public static class WebViewToJpg
             var documentWidthArray = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
                 """
                 [
-                    document.documentElement.clientWidth,
+                    document.documentElement ? document.documentElement.clientWidth : 0,
                     document.body ? document.body.scrollWidth : 0,
-                    document.documentElement.scrollWidth,
+                    document.documentElement ? document.documentElement.scrollWidth : 0,
                     document.body ? document.body.offsetWidth : 0,
-                    document.documentElement.offsetWidth
+                    document.documentElement ? document.documentElement.offsetWidth : 0
                 ]
                 """);
             var documentWidthCssPixels = JsonSerializer.Deserialize<List<int>>(documentWidthArray)!.Max();
@@ -405,8 +423,10 @@ public static class WebViewToJpg
                     await Task.Delay(1000);
 
                     // Get the actual scroll position after scrolling (CSS pixels)
-                    var actualScrollPositionCssPixels =
-                        (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("window.scrollY"), CultureInfo.InvariantCulture);
+                    var actualScrollPositionCssPixels = (int)decimal.Parse(
+                        await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                            "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || 0)"
+                        ), CultureInfo.InvariantCulture);
 
                     // Update the stored scroll position if it's different from what we requested
                     if (rowIndex == rowScrollPositions.Count)
@@ -459,11 +479,21 @@ public static class WebViewToJpg
                 currentScrollPositionCssPixels += viewportHeightCssPixels;
 
                 // Attempt to scroll to next position (CSS pixels)
-                await webContentWebView.CoreWebView2.ExecuteScriptAsync($"window.scrollTo(0, {currentScrollPositionCssPixels})");
+                var scrollToNextPositionFunction = $$"""
+                    window.scrollTo({
+                        top: {{currentScrollPositionCssPixels}},
+                        left: 0,
+                        behavior: "instant"
+                    });
+                    """;
+                await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToNextPositionFunction);
+                await Task.Delay(250);
 
                 // Get the actual scroll position after scrolling (CSS pixels)
-                var newScrollPositionCssPixels =
-                    (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("window.scrollY"), CultureInfo.InvariantCulture);
+                var newScrollPositionCssPixels = (int)decimal.Parse(
+                    await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                        "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || 0)"
+                    ), CultureInfo.InvariantCulture);
 
                 // Update accumulated height (physical pixels)
                 if (rowIndex == 1)
