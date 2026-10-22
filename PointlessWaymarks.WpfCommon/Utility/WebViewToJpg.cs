@@ -84,6 +84,7 @@ public static class WebViewToJpg
                 return JsonDocument.Parse(innerJson).RootElement.Clone();
             }
         }
+
         return doc.RootElement.Clone();
     }
 
@@ -96,136 +97,154 @@ public static class WebViewToJpg
         progress?.Report("OpenSilver WebAssembly Detected - Analyzing Page Structure for DevTools Capture");
 
         var pageMeasureScript = """
-            (() => {
-                var docEl = document.documentElement;
-                var body = document.body;
-                var vHeight = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : (window.innerHeight || (docEl ? docEl.clientHeight : 0));
-                var vWidth = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : (window.innerWidth || (docEl ? docEl.clientWidth : 0));
+                                (() => {
+                                    var docEl = document.documentElement;
+                                    var body = document.body;
+                                    var openSilverRoot = document.getElementById('opensilver-root') || document.querySelector('.opensilver-root-element');
+                                    var vHeight = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : (window.innerHeight || (docEl ? docEl.clientHeight : 0));
+                                    var vWidth = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : (window.innerWidth || (docEl ? docEl.clientWidth : 0));
 
-                var standardHeight = Math.max(
-                    docEl ? docEl.clientHeight : 0,
-                    body ? body.scrollHeight : 0,
-                    docEl ? docEl.scrollHeight : 0,
-                    body ? body.offsetHeight : 0,
-                    docEl ? docEl.offsetHeight : 0
-                );
-                var standardWidth = Math.max(
-                    docEl ? docEl.clientWidth : 0,
-                    body ? body.scrollWidth : 0,
-                    docEl ? docEl.scrollWidth : 0,
-                    body ? body.offsetWidth : 0,
-                    docEl ? docEl.offsetWidth : 0
-                );
+                                    var totalHeight = Math.max(
+                                        docEl ? docEl.clientHeight : 0,
+                                        docEl ? docEl.scrollHeight : 0,
+                                        docEl ? docEl.offsetHeight : 0,
+                                        body ? body.clientHeight : 0,
+                                        body ? body.scrollHeight : 0,
+                                        body ? body.offsetHeight : 0,
+                                        openSilverRoot ? openSilverRoot.scrollHeight : 0,
+                                        openSilverRoot ? openSilverRoot.offsetHeight : 0,
+                                        openSilverRoot ? openSilverRoot.clientHeight : 0,
+                                        vHeight
+                                    );
+                                    var totalWidth = Math.max(
+                                        docEl ? docEl.clientWidth : 0,
+                                        docEl ? docEl.scrollWidth : 0,
+                                        docEl ? docEl.offsetWidth : 0,
+                                        body ? body.clientWidth : 0,
+                                        body ? body.scrollWidth : 0,
+                                        body ? body.offsetWidth : 0,
+                                        openSilverRoot ? openSilverRoot.scrollWidth : 0,
+                                        openSilverRoot ? openSilverRoot.offsetWidth : 0,
+                                        openSilverRoot ? openSilverRoot.clientWidth : 0,
+                                        vWidth
+                                    );
 
-                var all = Array.from(document.querySelectorAll('*'));
-                var maxElementHeight = 0;
-                var maxElementWidth = 0;
+                                    if (openSilverRoot && openSilverRoot.children) {
+                                        for (var i = 0; i < openSilverRoot.children.length; i++) {
+                                            var child = openSilverRoot.children[i];
+                                            if (child.scrollHeight && child.scrollHeight > totalHeight) totalHeight = child.scrollHeight;
+                                            if (child.scrollWidth && child.scrollWidth > totalWidth) totalWidth = child.scrollWidth;
+                                            if (child.offsetHeight && child.offsetHeight > totalHeight) totalHeight = child.offsetHeight;
+                                            if (child.offsetWidth && child.offsetWidth > totalWidth) totalWidth = child.offsetWidth;
+                                        }
+                                    }
 
-                for (var i = 0; i < all.length; i++) {
-                    var el = all[i];
-                    if (el.scrollHeight && el.scrollHeight > maxElementHeight) {
-                        maxElementHeight = el.scrollHeight;
-                    }
-                    if (el.scrollWidth && el.scrollWidth > maxElementWidth) {
-                        maxElementWidth = el.scrollWidth;
-                    }
-                    try {
-                        var rect = el.getBoundingClientRect();
-                        if (rect.bottom && rect.bottom > maxElementHeight) {
-                            maxElementHeight = Math.ceil(rect.bottom);
-                        }
-                        if (rect.right && rect.right > maxElementWidth) {
-                            maxElementWidth = Math.ceil(rect.right);
-                        }
-                    } catch(e) {}
-                }
-
-                var totalHeight = Math.max(standardHeight, maxElementHeight, vHeight);
-                var totalWidth = Math.max(standardWidth, maxElementWidth, vWidth);
-
-                return {
-                    totalHeight: Math.ceil(totalHeight),
-                    totalWidth: Math.ceil(totalWidth),
-                    viewportHeight: Math.ceil(vHeight),
-                    viewportWidth: Math.ceil(vWidth)
-                };
-            })()
-            """;
-
-        var targetInfoJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(pageMeasureScript);
-        var targetInfo = ParseScriptResult(targetInfoJson);
-
-        var documentHeightCssPixels = Math.Min(maxHeight, (int)targetInfo.GetProperty("totalHeight").GetDouble());
-        var documentWidthCssPixels = (int)targetInfo.GetProperty("totalWidth").GetDouble();
-        var viewportHeightCssPixels = (int)targetInfo.GetProperty("viewportHeight").GetDouble();
-        var viewportWidthCssPixels = (int)targetInfo.GetProperty("viewportWidth").GetDouble();
-
-        // Convert to physical pixels for progress reporting
-        var documentHeight = (int)(documentHeightCssPixels * devicePixelRatio);
-        var documentWidth = (int)(documentWidthCssPixels * devicePixelRatio);
-        var viewportHeight = (int)(viewportHeightCssPixels * devicePixelRatio);
-        var viewportWidth = (int)(viewportWidthCssPixels * devicePixelRatio);
-
-        progress?.Report($"OpenSilver Document (CSS): {documentWidthCssPixels}x{documentHeightCssPixels}, " +
-                         $"Viewport (CSS): {viewportWidthCssPixels}x{viewportHeightCssPixels}");
-        progress?.Report($"OpenSilver Document (Physical): {documentWidth}x{documentHeight}, " +
-                         $"Viewport (Physical): {viewportWidth}x{viewportHeight}");
-
-        if (documentHeightCssPixels > viewportHeightCssPixels)
-        {
-            progress?.Report("Document Height Greater than Viewport Height - Fixed and Sticky Positioning to Absolute");
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
-                var x = document.querySelectorAll('*');
-                for(var i=0; i<x.length; i++) {
-                    var elementStyle = getComputedStyle(x[i]);
-                    if(elementStyle.position=="fixed" || elementStyle.position=="sticky") {
-                        x[i].style.position="absolute";
-                    }
-                }
-                """);
-        }
+                                    return {
+                                        totalHeight: Math.ceil(totalHeight),
+                                        totalWidth: Math.ceil(totalWidth),
+                                        viewportHeight: Math.ceil(vHeight),
+                                        viewportWidth: Math.ceil(vWidth)
+                                    };
+                                })()
+                                """;
 
         try
         {
+            var targetInfoJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(pageMeasureScript)
+                .WaitAsync(TimeSpan.FromSeconds(5));
+            var targetInfo = ParseScriptResult(targetInfoJson);
+
+            var viewportHeightCssPixels = targetInfo.TryGetProperty("viewportHeight", out var vhProp)
+                ? Math.Max(1, (int)vhProp.GetDouble())
+                : 1080;
+            var viewportWidthCssPixels = targetInfo.TryGetProperty("viewportWidth", out var vwProp)
+                ? Math.Max(1, (int)vwProp.GetDouble())
+                : 1920;
+
+            var rawHeight = targetInfo.TryGetProperty("totalHeight", out var thProp)
+                ? (int)thProp.GetDouble()
+                : viewportHeightCssPixels;
+            var rawWidth = targetInfo.TryGetProperty("totalWidth", out var twProp)
+                ? (int)twProp.GetDouble()
+                : viewportWidthCssPixels;
+
+            // Safe clamping to avoid GPU texture allocation crashes (max dimension 16384 physical pixels)
+            var maxDimensionCss = (int)(16384 / Math.Max(1.0, devicePixelRatio));
+            var documentHeightCssPixels = Math.Clamp(Math.Max(rawHeight, viewportHeightCssPixels), 100,
+                Math.Min(maxHeight, maxDimensionCss));
+            var documentWidthCssPixels = Math.Clamp(Math.Max(rawWidth, viewportWidthCssPixels), 100, maxDimensionCss);
+
+            // Convert to physical pixels for progress reporting
+            var documentHeight = (int)(documentHeightCssPixels * devicePixelRatio);
+            var documentWidth = (int)(documentWidthCssPixels * devicePixelRatio);
+            var viewportHeight = (int)(viewportHeightCssPixels * devicePixelRatio);
+            var viewportWidth = (int)(viewportWidthCssPixels * devicePixelRatio);
+
+            progress?.Report($"OpenSilver Document (CSS): {documentWidthCssPixels}x{documentHeightCssPixels}, " +
+                             $"Viewport (CSS): {viewportWidthCssPixels}x{viewportHeightCssPixels}");
+            progress?.Report($"OpenSilver Document (Physical): {documentWidth}x{documentHeight}, " +
+                             $"Viewport (Physical): {viewportWidth}x{viewportHeight}");
+
             progress?.Report("Setting Device Emulation for Full Page Capture");
-            var setMetricsParams = $$"""{"width": {{documentWidthCssPixels}}, "height": {{documentHeightCssPixels}}, "deviceScaleFactor": {{devicePixelRatio.ToString(CultureInfo.InvariantCulture)}}, "mobile": false}""";
-            await webContentWebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Emulation.setDeviceMetricsOverride", setMetricsParams);
+            var setMetricsParams =
+                $$"""{"width": {{documentWidthCssPixels}}, "height": {{documentHeightCssPixels}}, "deviceScaleFactor": {{devicePixelRatio.ToString(CultureInfo.InvariantCulture)}}, "mobile": false}""";
+            await webContentWebView.CoreWebView2
+                .CallDevToolsProtocolMethodAsync("Emulation.setDeviceMetricsOverride", setMetricsParams)
+                .WaitAsync(TimeSpan.FromSeconds(10));
 
             await Task.Delay(1000);
 
-            // Re-check if dimensions expanded after layout pass
-            var updatedInfoJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(pageMeasureScript);
-            var updatedInfo = ParseScriptResult(updatedInfoJson);
-            var updatedHeight = Math.Min(maxHeight, (int)updatedInfo.GetProperty("totalHeight").GetDouble());
-            var updatedWidth = (int)updatedInfo.GetProperty("totalWidth").GetDouble();
-
-            if (updatedHeight > documentHeightCssPixels || updatedWidth > documentWidthCssPixels)
+            // Re-check if dimensions expanded after layout pass (with timeout and error isolation)
+            try
             {
-                documentHeightCssPixels = Math.Max(documentHeightCssPixels, updatedHeight);
-                documentWidthCssPixels = Math.Max(documentWidthCssPixels, updatedWidth);
-                progress?.Report($"Updated Document Dimensions after Layout: {documentWidthCssPixels}x{documentHeightCssPixels}");
-                var updatedMetricsParams = $$"""{"width": {{documentWidthCssPixels}}, "height": {{documentHeightCssPixels}}, "deviceScaleFactor": {{devicePixelRatio.ToString(CultureInfo.InvariantCulture)}}, "mobile": false}""";
-                await webContentWebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Emulation.setDeviceMetricsOverride", updatedMetricsParams);
-                await Task.Delay(1000);
+                var updatedInfoJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(pageMeasureScript)
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+                var updatedInfo = ParseScriptResult(updatedInfoJson);
+                var updatedHeight = updatedInfo.TryGetProperty("totalHeight", out var uthProp)
+                    ? Math.Clamp((int)uthProp.GetDouble(), 100, Math.Min(maxHeight, maxDimensionCss))
+                    : documentHeightCssPixels;
+                var updatedWidth = updatedInfo.TryGetProperty("totalWidth", out var utwProp)
+                    ? Math.Clamp((int)utwProp.GetDouble(), 100, maxDimensionCss)
+                    : documentWidthCssPixels;
+
+                if (updatedHeight > documentHeightCssPixels || updatedWidth > documentWidthCssPixels)
+                {
+                    documentHeightCssPixels = Math.Max(documentHeightCssPixels, updatedHeight);
+                    documentWidthCssPixels = Math.Max(documentWidthCssPixels, updatedWidth);
+                    progress?.Report(
+                        $"Updated Document Dimensions after Layout: {documentWidthCssPixels}x{documentHeightCssPixels}");
+                    var updatedMetricsParams =
+                        $$"""{"width": {{documentWidthCssPixels}}, "height": {{documentHeightCssPixels}}, "deviceScaleFactor": {{devicePixelRatio.ToString(CultureInfo.InvariantCulture)}}, "mobile": false}""";
+                    await webContentWebView.CoreWebView2
+                        .CallDevToolsProtocolMethodAsync("Emulation.setDeviceMetricsOverride", updatedMetricsParams)
+                        .WaitAsync(TimeSpan.FromSeconds(10));
+                    await Task.Delay(1000);
+                }
+            }
+            catch (Exception ex)
+            {
+                progress?.Report(
+                    $"Layout dimension re-check skipped ({ex.Message}), continuing with initial dimensions.");
             }
 
             progress?.Report("Capturing Screenshot via DevTools Protocol");
             var captureParams = $$"""
-                {
-                    "format": "jpeg",
-                    "quality": 95,
-                    "fromSurface": true,
-                    "captureBeyondViewport": true,
-                    "clip": {
-                        "x": 0,
-                        "y": 0,
-                        "width": {{documentWidthCssPixels}},
-                        "height": {{documentHeightCssPixels}},
-                        "scale": 1
-                    }
-                }
-                """;
-            var captureResultJson = await webContentWebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Page.captureScreenshot", captureParams);
+                                  {
+                                      "format": "jpeg",
+                                      "quality": 95,
+                                      "fromSurface": true,
+                                      "clip": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": {{documentWidthCssPixels}},
+                                          "height": {{documentHeightCssPixels}},
+                                          "scale": 1
+                                      }
+                                  }
+                                  """;
+            var captureResultJson = await webContentWebView.CoreWebView2
+                .CallDevToolsProtocolMethodAsync("Page.captureScreenshot", captureParams)
+                .WaitAsync(TimeSpan.FromSeconds(15));
             using var captureDoc = JsonDocument.Parse(captureResultJson);
             if (captureDoc.RootElement.TryGetProperty("data", out var dataProp))
             {
@@ -244,7 +263,9 @@ public static class WebViewToJpg
         {
             try
             {
-                await webContentWebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Emulation.clearDeviceMetricsOverride", "{}");
+                await webContentWebView.CoreWebView2
+                    .CallDevToolsProtocolMethodAsync("Emulation.clearDeviceMetricsOverride", "{}")
+                    .WaitAsync(TimeSpan.FromSeconds(5));
             }
             catch
             {
@@ -265,33 +286,48 @@ public static class WebViewToJpg
         progress?.Report("Starting Capture");
 
         // Get the device pixel ratio first - this is crucial for proper scaling
-        var devicePixelRatio = double.Parse(
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync("window.devicePixelRatio"),
-            CultureInfo.InvariantCulture
-        );
+        var devicePixelRatioString = await webContentWebView.CoreWebView2
+            .ExecuteScriptAsync("window.devicePixelRatio || 1")
+            .WaitAsync(TimeSpan.FromSeconds(5));
+        var devicePixelRatio =
+            double.TryParse(devicePixelRatioString, NumberStyles.Any, CultureInfo.InvariantCulture, out var dpr) &&
+            dpr > 0
+                ? dpr
+                : 1.0;
 
         progress?.Report($"Device Pixel Ratio: {devicePixelRatio}");
 
         var viewPortTopUserPositionString =
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.pageTop");
-        var viewPortTopUserPosition = (int)decimal.Parse(viewPortTopUserPositionString, CultureInfo.InvariantCulture);
+            await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                    "(window.visualViewport && window.visualViewport.pageTop !== undefined) ? window.visualViewport.pageTop : (window.pageYOffset || 0)")
+                .WaitAsync(TimeSpan.FromSeconds(5));
+        var viewPortTopUserPosition = (int)(decimal.TryParse(viewPortTopUserPositionString, NumberStyles.Any,
+            CultureInfo.InvariantCulture, out var vTop)
+            ? vTop
+            : 0);
 
         var viewPortLeftUserPositionString =
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.pageLeft");
-        var viewPortLeftUserPosition = (int)decimal.Parse(viewPortLeftUserPositionString, CultureInfo.InvariantCulture);
+            await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                    "(window.visualViewport && window.visualViewport.pageLeft !== undefined) ? window.visualViewport.pageLeft : (window.pageXOffset || 0)")
+                .WaitAsync(TimeSpan.FromSeconds(5));
+        var viewPortLeftUserPosition = (int)(decimal.TryParse(viewPortLeftUserPositionString, NumberStyles.Any,
+            CultureInfo.InvariantCulture, out var vLeft)
+            ? vLeft
+            : 0);
 
         // Probe for OpenSilver / Silverlight WebAssembly
         var isOpenSilverScript = """
-            (() => {
-                var hasOpenSilverRoot = !!document.getElementById('opensilver-root') || !!document.querySelector('.opensilver-root-element');
-                var hasOpenSilverScript = Array.from(document.scripts).some(s => s.src && (s.src.toLowerCase().includes('opensilver') || s.src.toLowerCase().includes('cshtml5')));
-                var hasOpenSilverGlobal = typeof window.OpenSilver !== 'undefined' || typeof window.CSHTML5 !== 'undefined';
-                var hasOpenSilverElements = !!document.querySelector('[class*="opensilver-"]');
+                                 (() => {
+                                     var hasOpenSilverRoot = !!document.getElementById('opensilver-root') || !!document.querySelector('.opensilver-root-element');
+                                     var hasOpenSilverScript = Array.from(document.scripts).some(s => s.src && (s.src.toLowerCase().includes('opensilver') || s.src.toLowerCase().includes('cshtml5')));
+                                     var hasOpenSilverGlobal = typeof window.OpenSilver !== 'undefined' || typeof window.CSHTML5 !== 'undefined';
+                                     var hasOpenSilverElements = !!document.querySelector('[class*="opensilver-"]');
 
-                return hasOpenSilverRoot || hasOpenSilverScript || hasOpenSilverGlobal || hasOpenSilverElements;
-            })()
-            """;
-        var isOpenSilverResultJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(isOpenSilverScript);
+                                     return hasOpenSilverRoot || hasOpenSilverScript || hasOpenSilverGlobal || hasOpenSilverElements;
+                                 })()
+                                 """;
+        var isOpenSilverResultJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(isOpenSilverScript)
+            .WaitAsync(TimeSpan.FromSeconds(5));
         var isOpenSilver = false;
         try
         {
@@ -310,7 +346,8 @@ public static class WebViewToJpg
 
         if (isOpenSilver)
         {
-            capturedImageBytes = await CaptureOpenSilverViaDevTools(webContentWebView, devicePixelRatio, maxHeight, progress);
+            capturedImageBytes =
+                await CaptureOpenSilverViaDevTools(webContentWebView, devicePixelRatio, maxHeight, progress);
         }
 
         // Main proven chunked-capture path for regular web pages (or as fallback)
@@ -320,13 +357,13 @@ public static class WebViewToJpg
                 $"Current Top {viewPortTopUserPosition}, Left {viewPortLeftUserPosition} - Disabling Smooth Scrolling and Hiding Scrollbars");
 
             await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
-                var style = document.createElement('style');
-                style.id = 'pwt-screenshot-override-style';
-                style.innerHTML = '* { scroll-behavior: auto !important; } html { scroll-behavior: auto !important; } body { scroll-behavior: auto !important; } ::-webkit-scrollbar { display: none !important; }';
-                document.head.appendChild(style);
-                if (document.documentElement) document.documentElement.style.scrollBehavior = 'auto';
-                if (document.body) document.body.style.scrollBehavior = 'auto';
-                """);
+                                                                    var style = document.createElement('style');
+                                                                    style.id = 'pwt-screenshot-override-style';
+                                                                    style.innerHTML = '* { scroll-behavior: auto !important; } html { scroll-behavior: auto !important; } body { scroll-behavior: auto !important; } ::-webkit-scrollbar { display: none !important; }';
+                                                                    document.head.appendChild(style);
+                                                                    if (document.documentElement) document.documentElement.style.scrollBehavior = 'auto';
+                                                                    if (document.body) document.body.style.scrollBehavior = 'auto';
+                                                                    """);
 
             var documentHeightArray = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
                 """
@@ -354,9 +391,11 @@ public static class WebViewToJpg
 
             // Get viewport dimensions in CSS pixels
             var viewportHeightCssPixels =
-                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.height"), CultureInfo.InvariantCulture);
-            var viewportWidthCssPixels = 
-                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.width"), CultureInfo.InvariantCulture);
+                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.height"),
+                    CultureInfo.InvariantCulture);
+            var viewportWidthCssPixels =
+                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.width"),
+                    CultureInfo.InvariantCulture);
 
             // Convert to physical pixels for image operations
             var documentHeight = (int)(documentHeightCssPixels * devicePixelRatio);
@@ -371,16 +410,17 @@ public static class WebViewToJpg
 
             if (documentHeightCssPixels > viewportHeightCssPixels)
             {
-                progress?.Report("Document Height Greater than Viewport Height - Fixed and Sticky Positioning to Absolute");
+                progress?.Report(
+                    "Document Height Greater than Viewport Height - Fixed and Sticky Positioning to Absolute");
                 await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
-                    var x = document.querySelectorAll('*');
-                    for(var i=0; i<x.length; i++) {
-                        var elementStyle = getComputedStyle(x[i]);
-                        if(elementStyle.position=="fixed" || elementStyle.position=="sticky") {
-                            x[i].style.position="absolute";
-                        }
-                    }
-                    """);
+                                                                        var x = document.querySelectorAll('*');
+                                                                        for(var i=0; i<x.length; i++) {
+                                                                            var elementStyle = getComputedStyle(x[i]);
+                                                                            if(elementStyle.position=="fixed" || elementStyle.position=="sticky") {
+                                                                                x[i].style.position="absolute";
+                                                                            }
+                                                                        }
+                                                                        """);
             }
 
             var horizontalChunksCssPixels = (int)Math.Ceiling((double)documentWidthCssPixels / viewportWidthCssPixels);
@@ -413,12 +453,12 @@ public static class WebViewToJpg
 
                     // Scroll in CSS pixels
                     var scrollToViewFunction = $$"""
-                        window.scrollTo({
-                            top: {{currentScrollPositionCssPixels}},
-                            left: {{j * viewportWidthCssPixels}},
-                            behavior: "instant"
-                        });
-                        """;
+                                                 window.scrollTo({
+                                                     top: {{currentScrollPositionCssPixels}},
+                                                     left: {{j * viewportWidthCssPixels}},
+                                                     behavior: "instant"
+                                                 });
+                                                 """;
                     await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToViewFunction);
                     await Task.Delay(1000);
 
@@ -448,10 +488,10 @@ public static class WebViewToJpg
                         // For the last chunk, calculate remaining width in physical pixels
                         var remainingWidthCssPixels = documentWidthCssPixels - (j * viewportWidthCssPixels);
                         var neededLastImageWidth = (int)(remainingWidthCssPixels * devicePixelRatio);
-                        
-                        if (neededLastImageWidth == 0) 
+
+                        if (neededLastImageWidth == 0)
                             neededLastImageWidth = viewportWidth;
-                        
+
                         // Only use the needed portion of the source image
                         sourceRect = new SKRect(0, 0, neededLastImageWidth, image.Height);
                         // Position it correctly at the current width
@@ -480,12 +520,12 @@ public static class WebViewToJpg
 
                 // Attempt to scroll to next position (CSS pixels)
                 var scrollToNextPositionFunction = $$"""
-                    window.scrollTo({
-                        top: {{currentScrollPositionCssPixels}},
-                        left: 0,
-                        behavior: "instant"
-                    });
-                    """;
+                                                     window.scrollTo({
+                                                         top: {{currentScrollPositionCssPixels}},
+                                                         left: 0,
+                                                         behavior: "instant"
+                                                     });
+                                                     """;
                 await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToNextPositionFunction);
                 await Task.Delay(250);
 
@@ -504,7 +544,8 @@ public static class WebViewToJpg
                 else
                 {
                     // Calculate the overlap with previous row (CSS pixels)
-                    var overlapCssPixels = rowScrollPositions[rowIndex - 2] + viewportHeightCssPixels - newScrollPositionCssPixels;
+                    var overlapCssPixels = rowScrollPositions[rowIndex - 2] + viewportHeightCssPixels -
+                                           newScrollPositionCssPixels;
                     // Convert to physical pixels
                     var overlapPhysical = (int)(overlapCssPixels * devicePixelRatio);
                     var effectiveHeight = viewportHeight - Math.Max(0, overlapPhysical);
@@ -555,7 +596,7 @@ public static class WebViewToJpg
                     var previousRowPositionCss = rowScrollPositions[i - 1];
                     var currentRowPositionCss = rowScrollPositions[i];
                     var overlapCssPixels = previousRowPositionCss + viewportHeightCssPixels - currentRowPositionCss;
-                    
+
                     // Convert to physical pixels for image operations
                     var overlapPhysical = (int)(overlapCssPixels * devicePixelRatio);
 
@@ -597,12 +638,12 @@ public static class WebViewToJpg
         webContentWebView.Reload();
 
         var scrollBackToUserPositionFunction = $$"""
-            window.scrollTo({
-                top: {{viewPortTopUserPosition}},
-                left: {{viewPortLeftUserPosition}},
-                behavior: "instant"
-            });
-            """;
+                                                 window.scrollTo({
+                                                     top: {{viewPortTopUserPosition}},
+                                                     left: {{viewPortLeftUserPosition}},
+                                                     behavior: "instant"
+                                                 });
+                                                 """;
 
         await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollBackToUserPositionFunction);
 
