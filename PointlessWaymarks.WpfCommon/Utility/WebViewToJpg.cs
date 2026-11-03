@@ -354,48 +354,152 @@ public static class WebViewToJpg
         if (capturedImageBytes is null || capturedImageBytes.Length == 0)
         {
             progress?.Report(
-                $"Current Top {viewPortTopUserPosition}, Left {viewPortLeftUserPosition} - Disabling Smooth Scrolling and Hiding Scrollbars");
+                $"Current Top {viewPortTopUserPosition}, Left {viewPortLeftUserPosition} - Disabling Smooth Scrolling, Unlocking Page Layout, and Hiding Scrollbars");
 
-            await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
-                                                                    var style = document.createElement('style');
-                                                                    style.id = 'pwt-screenshot-override-style';
-                                                                    style.innerHTML = '* { scroll-behavior: auto !important; } html { scroll-behavior: auto !important; } body { scroll-behavior: auto !important; } ::-webkit-scrollbar { display: none !important; }';
-                                                                    document.head.appendChild(style);
-                                                                    if (document.documentElement) document.documentElement.style.scrollBehavior = 'auto';
-                                                                    if (document.body) document.body.style.scrollBehavior = 'auto';
-                                                                    """);
+            var pagePrepScript = """
+                                 (() => {
+                                     var style = document.getElementById('pwt-screenshot-override-style');
+                                     if (!style) {
+                                         style = document.createElement('style');
+                                         style.id = 'pwt-screenshot-override-style';
+                                         (document.head || document.documentElement).appendChild(style);
+                                     }
+                                     style.innerHTML = `
+                                         * {
+                                             scroll-behavior: auto !important;
+                                             animation: none !important;
+                                             transition: none !important;
+                                         }
+                                         html {
+                                             scroll-behavior: auto !important;
+                                             overflow: visible !important;
+                                             overflow-y: visible !important;
+                                             height: auto !important;
+                                             min-height: 100% !important;
+                                             max-height: none !important;
+                                         }
+                                         body {
+                                             scroll-behavior: auto !important;
+                                             overflow: visible !important;
+                                             overflow-y: visible !important;
+                                             height: auto !important;
+                                             min-height: 100% !important;
+                                             max-height: none !important;
+                                             position: static !important;
+                                         }
+                                         ::-webkit-scrollbar {
+                                             display: none !important;
+                                         }
+                                     `;
 
-            var documentHeightArray = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                """
-                [
-                    document.documentElement ? document.documentElement.clientHeight : 0,
-                    document.body ? document.body.scrollHeight : 0,
-                    document.documentElement ? document.documentElement.scrollHeight : 0,
-                    document.body ? document.body.offsetHeight : 0,
-                    document.documentElement ? document.documentElement.offsetHeight : 0
-                ]
-                """);
-            var documentHeightCssPixels = JsonSerializer.Deserialize<List<int>>(documentHeightArray)!.Max();
+                                     if (document.documentElement) {
+                                         document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
+                                         document.documentElement.style.setProperty('overflow', 'visible', 'important');
+                                         document.documentElement.style.setProperty('overflow-y', 'visible', 'important');
+                                         document.documentElement.style.setProperty('height', 'auto', 'important');
+                                         document.documentElement.style.setProperty('max-height', 'none', 'important');
+                                     }
+                                     if (document.body) {
+                                         document.body.style.setProperty('scroll-behavior', 'auto', 'important');
+                                         document.body.style.setProperty('overflow', 'visible', 'important');
+                                         document.body.style.setProperty('overflow-y', 'visible', 'important');
+                                         document.body.style.setProperty('height', 'auto', 'important');
+                                         document.body.style.setProperty('max-height', 'none', 'important');
+                                         if (window.getComputedStyle(document.body).position === 'fixed') {
+                                             document.body.style.setProperty('position', 'static', 'important');
+                                         }
+                                     }
 
-            var documentWidthArray = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                """
-                [
-                    document.documentElement ? document.documentElement.clientWidth : 0,
-                    document.body ? document.body.scrollWidth : 0,
-                    document.documentElement ? document.documentElement.scrollWidth : 0,
-                    document.body ? document.body.offsetWidth : 0,
-                    document.documentElement ? document.documentElement.offsetWidth : 0
-                ]
-                """);
-            var documentWidthCssPixels = JsonSerializer.Deserialize<List<int>>(documentWidthArray)!.Max();
+                                     // Unlock scrollable containers / clipping elements (e.g. SPAs, modals, authwalls, LinkedIn)
+                                     var all = document.querySelectorAll('*');
+                                     for (var i = 0; i < all.length; i++) {
+                                         var el = all[i];
+                                         if (el === document.documentElement || el === document.body) continue;
+                                         var s = window.getComputedStyle(el);
+                                         if ((s.overflowY === 'hidden' || s.overflowY === 'auto' || s.overflowY === 'scroll' ||
+                                              s.overflow === 'hidden' || s.overflow === 'auto' || s.overflow === 'scroll') &&
+                                             (s.height.includes('px') || s.height.includes('%') || s.height.includes('vh') || s.maxHeight !== 'none')) {
+                                             if (el.scrollHeight > el.clientHeight + 10) {
+                                                 el.style.setProperty('height', 'auto', 'important');
+                                                 el.style.setProperty('max-height', 'none', 'important');
+                                                 el.style.setProperty('overflow', 'visible', 'important');
+                                                 el.style.setProperty('overflow-y', 'visible', 'important');
+                                             }
+                                         }
+                                     }
+                                 })()
+                                 """;
+            await webContentWebView.CoreWebView2.ExecuteScriptAsync(pagePrepScript)
+                .WaitAsync(TimeSpan.FromSeconds(5));
 
-            // Get viewport dimensions in CSS pixels
-            var viewportHeightCssPixels =
-                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.height"),
-                    CultureInfo.InvariantCulture);
-            var viewportWidthCssPixels =
-                (int)decimal.Parse(await webContentWebView.CoreWebView2.ExecuteScriptAsync("visualViewport.width"),
-                    CultureInfo.InvariantCulture);
+            var pageMeasureScript = """
+                                    (() => {
+                                        var docEl = document.documentElement;
+                                        var body = document.body;
+                                        var vHeight = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : (window.innerHeight || (docEl ? docEl.clientHeight : 0));
+                                        var vWidth = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : (window.innerWidth || (docEl ? docEl.clientWidth : 0));
+
+                                        var totalHeight = Math.max(
+                                            docEl ? docEl.clientHeight : 0,
+                                            docEl ? docEl.scrollHeight : 0,
+                                            docEl ? docEl.offsetHeight : 0,
+                                            body ? body.clientHeight : 0,
+                                            body ? body.scrollHeight : 0,
+                                            body ? body.offsetHeight : 0,
+                                            vHeight
+                                        );
+                                        var totalWidth = Math.max(
+                                            docEl ? docEl.clientWidth : 0,
+                                            docEl ? docEl.scrollWidth : 0,
+                                            docEl ? docEl.offsetWidth : 0,
+                                            body ? body.clientWidth : 0,
+                                            body ? body.scrollWidth : 0,
+                                            body ? body.offsetWidth : 0,
+                                            vWidth
+                                        );
+
+                                        var all = document.querySelectorAll('*');
+                                        for (var i = 0; i < all.length; i++) {
+                                            var el = all[i];
+                                            if (el.scrollHeight && el.scrollHeight > totalHeight) totalHeight = el.scrollHeight;
+                                            if (el.offsetHeight && el.offsetHeight > totalHeight) totalHeight = el.offsetHeight;
+                                            if (el.scrollWidth && el.scrollWidth > totalWidth) totalWidth = el.scrollWidth;
+                                            if (el.offsetWidth && el.offsetWidth > totalWidth) totalWidth = el.offsetWidth;
+                                            var rect = el.getBoundingClientRect();
+                                            if (rect && (rect.bottom + window.scrollY) > totalHeight) {
+                                                var pos = window.getComputedStyle(el).position;
+                                                if (pos !== 'fixed') {
+                                                    totalHeight = Math.max(totalHeight, rect.bottom + window.scrollY);
+                                                }
+                                            }
+                                        }
+
+                                        return {
+                                            totalHeight: Math.ceil(totalHeight),
+                                            totalWidth: Math.ceil(totalWidth),
+                                            viewportHeight: Math.ceil(vHeight),
+                                            viewportWidth: Math.ceil(vWidth)
+                                        };
+                                    })()
+                                    """;
+
+            var dimensionJson = await webContentWebView.CoreWebView2.ExecuteScriptAsync(pageMeasureScript)
+                .WaitAsync(TimeSpan.FromSeconds(5));
+            var dimensionInfo = ParseScriptResult(dimensionJson);
+
+            var viewportHeightCssPixels = dimensionInfo.TryGetProperty("viewportHeight", out var vhProp)
+                ? Math.Max(1, (int)vhProp.GetDouble())
+                : 1080;
+            var viewportWidthCssPixels = dimensionInfo.TryGetProperty("viewportWidth", out var vwProp)
+                ? Math.Max(1, (int)vwProp.GetDouble())
+                : 1920;
+
+            var documentHeightCssPixels = dimensionInfo.TryGetProperty("totalHeight", out var thProp)
+                ? Math.Max((int)thProp.GetDouble(), viewportHeightCssPixels)
+                : viewportHeightCssPixels;
+            var documentWidthCssPixels = dimensionInfo.TryGetProperty("totalWidth", out var twProp)
+                ? Math.Max((int)twProp.GetDouble(), viewportWidthCssPixels)
+                : viewportWidthCssPixels;
 
             // Convert to physical pixels for image operations
             var documentHeight = (int)(documentHeightCssPixels * devicePixelRatio);
@@ -415,12 +519,12 @@ public static class WebViewToJpg
                 await webContentWebView.CoreWebView2.ExecuteScriptAsync("""
                                                                         var x = document.querySelectorAll('*');
                                                                         for(var i=0; i<x.length; i++) {
-                                                                            var elementStyle = getComputedStyle(x[i]);
+                                                                            var elementStyle = window.getComputedStyle(x[i]);
                                                                             if(elementStyle.position=="fixed" || elementStyle.position=="sticky") {
-                                                                                x[i].style.position="absolute";
+                                                                                x[i].style.setProperty('position', 'absolute', 'important');
                                                                             }
                                                                         }
-                                                                        """);
+                                                                        """).WaitAsync(TimeSpan.FromSeconds(5));
             }
 
             var horizontalChunksCssPixels = (int)Math.Ceiling((double)documentWidthCssPixels / viewportWidthCssPixels);
@@ -453,20 +557,40 @@ public static class WebViewToJpg
 
                     // Scroll in CSS pixels
                     var scrollToViewFunction = $$"""
-                                                 window.scrollTo({
-                                                     top: {{currentScrollPositionCssPixels}},
-                                                     left: {{j * viewportWidthCssPixels}},
-                                                     behavior: "instant"
-                                                 });
+                                                 (() => {
+                                                     var targetTop = {{currentScrollPositionCssPixels}};
+                                                     var targetLeft = {{j * viewportWidthCssPixels}};
+                                                     window.scrollTo({
+                                                         top: targetTop,
+                                                         left: targetLeft,
+                                                         behavior: "instant"
+                                                     });
+                                                     if (document.documentElement) {
+                                                         document.documentElement.scrollTop = targetTop;
+                                                         document.documentElement.scrollLeft = targetLeft;
+                                                     }
+                                                     if (document.body) {
+                                                         document.body.scrollTop = targetTop;
+                                                         document.body.scrollLeft = targetLeft;
+                                                     }
+                                                     if (document.scrollingElement) {
+                                                         document.scrollingElement.scrollTop = targetTop;
+                                                         document.scrollingElement.scrollLeft = targetLeft;
+                                                     }
+                                                 })()
                                                  """;
-                    await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToViewFunction);
+                    await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToViewFunction)
+                        .WaitAsync(TimeSpan.FromSeconds(5));
                     await Task.Delay(1000);
 
                     // Get the actual scroll position after scrolling (CSS pixels)
-                    var actualScrollPositionCssPixels = (int)decimal.Parse(
-                        await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                            "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || 0)"
-                        ), CultureInfo.InvariantCulture);
+                    var actualScrollPositionString = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                        "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || 0)"
+                    ).WaitAsync(TimeSpan.FromSeconds(5));
+                    var actualScrollPositionCssPixels = (int)(decimal.TryParse(actualScrollPositionString,
+                        NumberStyles.Any, CultureInfo.InvariantCulture, out var actScroll)
+                        ? actScroll
+                        : 0);
 
                     // Update the stored scroll position if it's different from what we requested
                     if (rowIndex == rowScrollPositions.Count)
@@ -520,20 +644,39 @@ public static class WebViewToJpg
 
                 // Attempt to scroll to next position (CSS pixels)
                 var scrollToNextPositionFunction = $$"""
-                                                     window.scrollTo({
-                                                         top: {{currentScrollPositionCssPixels}},
-                                                         left: 0,
-                                                         behavior: "instant"
-                                                     });
+                                                     (() => {
+                                                         var targetTop = {{currentScrollPositionCssPixels}};
+                                                         window.scrollTo({
+                                                             top: targetTop,
+                                                             left: 0,
+                                                             behavior: "instant"
+                                                         });
+                                                         if (document.documentElement) {
+                                                             document.documentElement.scrollTop = targetTop;
+                                                             document.documentElement.scrollLeft = 0;
+                                                         }
+                                                         if (document.body) {
+                                                             document.body.scrollTop = targetTop;
+                                                             document.body.scrollLeft = 0;
+                                                         }
+                                                         if (document.scrollingElement) {
+                                                             document.scrollingElement.scrollTop = targetTop;
+                                                             document.scrollingElement.scrollLeft = 0;
+                                                         }
+                                                     })()
                                                      """;
-                await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToNextPositionFunction);
+                await webContentWebView.CoreWebView2.ExecuteScriptAsync(scrollToNextPositionFunction)
+                    .WaitAsync(TimeSpan.FromSeconds(5));
                 await Task.Delay(250);
 
                 // Get the actual scroll position after scrolling (CSS pixels)
-                var newScrollPositionCssPixels = (int)decimal.Parse(
-                    await webContentWebView.CoreWebView2.ExecuteScriptAsync(
-                        "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || 0)"
-                    ), CultureInfo.InvariantCulture);
+                var newScrollPositionString = await webContentWebView.CoreWebView2.ExecuteScriptAsync(
+                    "(window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || 0)"
+                ).WaitAsync(TimeSpan.FromSeconds(5));
+                var newScrollPositionCssPixels = (int)(decimal.TryParse(newScrollPositionString,
+                    NumberStyles.Any, CultureInfo.InvariantCulture, out var nScroll)
+                    ? nScroll
+                    : 0);
 
                 // Update accumulated height (physical pixels)
                 if (rowIndex == 1)

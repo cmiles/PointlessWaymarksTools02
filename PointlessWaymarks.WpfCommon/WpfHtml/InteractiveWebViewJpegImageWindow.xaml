@@ -11,7 +11,8 @@
         xmlns:behaviors="clr-namespace:PointlessWaymarks.WpfCommon.Behaviors"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
-        Title="Web Page - Jpeg Image Window" Height="650" Width="800">
+        Title="Web Page - Jpeg Image Window" Height="650" Width="800"
+        PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -29,51 +30,137 @@
             BorderBrush="LightGray"
             BorderThickness="2"
             CornerRadius="4">
-            <Grid Margin="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="160" />
-                    <ColumnDefinition Width="160" />
-                </Grid.ColumnDefinitions>
-                <Label
-                    Margin="4,4,4,0"
-                    VerticalAlignment="Center"
-                    FontWeight="Bold"
-                    Target="{Binding ElementName=UrlTextBox}">
-                    URL:
-                </Label>
-                <TextBox
-                    Name="UrlTextBox"
-                    Grid.Column="1"
-                    Margin="4,0,4,0"
-                    VerticalContentAlignment="Center"
-                    AcceptsReturn="False"
-                    KeyDown="UrlTextBox_KeyDown"
-                    Text="{Binding UserUrl, UpdateSourceTrigger=Explicit}"
-                    TextAlignment="Left" />
-                <Button
-                    Grid.Column="2"
-                    Padding="12,4,12,4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Click="ButtonNavigate_OnClick">
-                    Navigate
-                </Button>
-                <Button
-                    Grid.Column="3"
-                    Margin="4,0,0,0"
-                    Padding="24,4,24,4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{Binding SaveCurrentPageAsJpegCommand}">
-                    <StackPanel Orientation="Horizontal">
-                        <Image
-                            Source="{svgc:SvgImage Source=/Icons/file-jpg-box.svg, AppName=PointlessWaymarks.WpfCommon}" />
-                        <TextBlock Margin="8,0,0,0">Save as Jpeg</TextBlock>
-                    </StackPanel>
-                </Button>
-            </Grid>
+            <StackPanel Margin="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="160" />
+                    </Grid.ColumnDefinitions>
+                    <Label
+                        Margin="4,4,4,0"
+                        VerticalAlignment="Center"
+                        FontWeight="Bold"
+                        Target="{Binding ElementName=UrlTextBox}">
+                        URL:
+                    </Label>
+                    <TextBox
+                        Name="UrlTextBox"
+                        Grid.Column="1"
+                        Margin="4,0,4,0"
+                        VerticalContentAlignment="Center"
+                        AcceptsReturn="False"
+                        KeyDown="UrlTextBox_KeyDown"
+                        Text="{Binding UserUrl, UpdateSourceTrigger=Explicit}"
+                        TextAlignment="Left" />
+                    <Button
+                        Grid.Column="2"
+                        Margin="2,0,2,0"
+                        Padding="8,4,8,4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Click="ButtonNavigate_OnClick">
+                        Navigate
+                    </Button>
+                    <Button
+                        Grid.Column="3"
+                        Margin="2,0,2,0"
+                        Padding="8,4,8,4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Command="{Binding SaveCurrentPageAsJpegCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image
+                                Source="{svgc:SvgImage Source=/Icons/file-jpg-box.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                            <TextBlock Margin="6,0,0,0">Save as Jpeg</TextBlock>
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Grid.Column="4"
+                        Margin="2,0,0,0"
+                        Padding="8,4,8,4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Visibility="{Binding ManualCaptureActive, Converter={StaticResource BooleanNotToVisibility}}"
+                        Command="{Binding StartManualCaptureCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image
+                                Source="{svgc:SvgImage Source=/Icons/camera-outline.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                            <TextBlock Margin="6,0,0,0">Manual Capture</TextBlock>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <Border
+                    Margin="0,6,0,0"
+                    Padding="6,4,6,4"
+                    Background="#EEF8EE"
+                    BorderBrush="#88CC88"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Visibility="{Binding ManualCaptureActive, Converter={StaticResource BooleanToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold" Text="Manual Capture Active:" />
+                            <TextBlock Margin="6,0,0,0" Text="Scroll and press [Ctrl+Space] to capture frames." />
+                        </StackPanel>
+                        <Border
+                            Grid.Column="1"
+                            Margin="4,0,8,0"
+                            Padding="8,2,8,2"
+                            Background="#D0E8D0"
+                            CornerRadius="3"
+                            VerticalAlignment="Center">
+                            <TextBlock FontWeight="Bold"
+                                       Text="{Binding ManualCapturedCount, StringFormat='Frames: {0}'}" />
+                        </Border>
+                        <Button
+                            Grid.Column="2"
+                            Margin="2,0,2,0"
+                            Padding="10,3,10,3"
+                            VerticalAlignment="Center"
+                            Command="{Binding CaptureManualFrameCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image
+                                    Source="{svgc:SvgImage Source=/Icons/camera-outline.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                                <TextBlock Margin="4,0,0,0">Capture (Ctrl+Space)</TextBlock>
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Grid.Column="3"
+                            Margin="2,0,2,0"
+                            Padding="12,3,12,3"
+                            VerticalAlignment="Center"
+                            Command="{Binding FinishManualCaptureCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image
+                                    Source="{svgc:SvgImage Source=/Icons/file-jpg-box.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                                <TextBlock Margin="4,0,0,0">Finish &amp; Save</TextBlock>
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Grid.Column="4"
+                            Margin="2,0,0,0"
+                            Padding="10,3,10,3"
+                            VerticalAlignment="Center"
+                            Command="{Binding CancelManualCaptureCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image
+                                    Source="{svgc:SvgImage Source=/Icons/close.svg, AppName=PointlessWaymarks.WpfCommon}" />
+                                <TextBlock Margin="4,0,0,0">Cancel</TextBlock>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Border>
         <Border
             Grid.Row="1"
@@ -84,6 +171,7 @@
             <wpf:WebView2CompositionControl
                 x:Name="WebContentWebView"
                 Margin="4"
+                PreviewKeyDown="WebContentWebView_PreviewKeyDown"
                 Source="{Binding UserUrl, TargetNullValue='about:blank'}">
                 <b:Interaction.Behaviors>
                     <behaviors:WebViewToJpgFunctionInjection JpgScreenshotFunctionName="JpgScreenshotFunction" />
